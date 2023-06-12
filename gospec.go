@@ -50,9 +50,7 @@ func (suite *Suite) report() {
 	fmt.Printf("\n")
 }
 
-func (suite *Suite) Start() {
-	suite.report()
-
+func (suite *Suite) buildSuites() [][]*step {
 	var suites [][]*step
 	stack := []*step{}
 	indent := -1
@@ -120,15 +118,36 @@ func (suite *Suite) Start() {
 		indent--
 	}
 
-	debugSuitesAndSteps(suites)
+	return suites
+}
+
+func (suite *Suite) Start() {
+	suite.report()
+
+	suites := suite.buildSuites()
+
+	// debugSuitesAndSteps(suites)
 
 	for _, childSuite := range suites {
-		suite.t.Run("", func(t *testing.T) {
+		suite.t.Run(buildSuiteTitle(childSuite), func(t *testing.T) {
 			for _, step := range childSuite {
 				step.cb()
 			}
 		})
 	}
+}
+
+func buildSuiteTitle(suite []*step) string {
+	var sb strings.Builder
+	for i, s := range suite {
+		if s.block == isDescribe || s.block == isIt {
+			if i != 0 {
+				sb.WriteString("/")
+			}
+			sb.WriteString(strings.TrimSpace(s.title))
+		}
+	}
+	return sb.String()
 }
 
 func debugSuitesAndSteps(suites [][]*step) {
@@ -223,14 +242,14 @@ func (suite *Suite) Expect(value any) *Chain {
 					if kind == reflect.String {
 						reflectValue := reflect.ValueOf(value)
 						if reflectValue.Len() != length {
-							suite.t.Errorf("expected %s to have length %d but it has %d", value, reflectValue.Len(), length)
+							suite.t.Errorf("expected %s to have length %d but it has %d", value, length, reflectValue.Len())
 						}
 						return
 					}
 
 					reflectValue := reflect.ValueOf(value)
 					if reflectValue.Len() != length {
-						suite.t.Errorf("expected %s to have length %d but it has %d", value, reflectValue.Len(), length)
+						suite.t.Errorf("expected %s to have length %d but it has %d", value, length, reflectValue.Len())
 					}
 				},
 				Property: func(prop any) {
@@ -269,7 +288,10 @@ func (suite *Suite) Expect(value any) *Chain {
 					}
 				},
 				EqualTo: func(expected any) {
-					// TODO: implement me
+					suite.t.Helper()
+					if !reflect.DeepEqual(expected, value) {
+						suite.t.Errorf("does not equal")
+					}
 				},
 			},
 		},
