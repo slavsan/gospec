@@ -2,13 +2,18 @@ package gospec
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 )
 
+type testingInterface interface {
+	Helper()
+	Errorf(format string, args ...interface{})
+	Run(name string, f func(t *testing.T)) bool
+}
+
 type Suite struct {
-	t      *testing.T
+	t      testingInterface
 	steps  []*step
 	indent int
 }
@@ -32,7 +37,7 @@ func NewTestSuite(t *testing.T) *Suite {
 	return &Suite{
 		t:      t,
 		steps:  []*step{},
-		indent: -1,
+		indent: 0,
 	}
 }
 
@@ -42,10 +47,10 @@ func (suite *Suite) report() {
 			continue
 		}
 		if s.block == isIt {
-			fmt.Printf("%s✓ %s\n", strings.Repeat("  ", s.indent+1), s.title)
+			fmt.Printf("%s✓ %s (%d)\n", strings.Repeat("  ", s.indent+1), s.title, s.indent)
 			continue
 		}
-		fmt.Printf("%s%s\n", strings.Repeat("  ", s.indent), s.title)
+		fmt.Printf("%s%s (%d)\n", strings.Repeat("  ", s.indent), s.title, s.indent)
 	}
 	fmt.Printf("\n")
 }
@@ -53,10 +58,16 @@ func (suite *Suite) report() {
 func (suite *Suite) buildSuites() [][]*step {
 	var suites [][]*step
 	stack := []*step{}
-	indent := -1
+	indent := 0
 
 	copyStack := func() {
 		suite := []*step{}
+		if len(suites) > 0 {
+			lastSuite := suites[len(suites)-1]
+			if stack[len(stack)-1] == lastSuite[len(lastSuite)-1] {
+				return
+			}
+		}
 		for _, step := range stack {
 			suite = append(suite, step)
 		}
@@ -68,41 +79,64 @@ func (suite *Suite) buildSuites() [][]*step {
 		return suite[len(suite)-1].block == isIt
 	}
 
-	for _, s := range suite.steps {
+	lastSuiteStartsWithStep := func(s *step) bool {
+		if len(suites) == 0 {
+			return false
+		}
+		suite := suites[len(suites)-1]
+		return suite[0] == s
+	}
+
+	findLastSiblingIndex := func(s *step) int {
+		lastDescribeIndex := len(stack)
+		for i := len(stack) - 1; i >= 0; i-- {
+			step := stack[i]
+			lastDescribeIndex--
+			if step.indent == s.indent && step.block == isDescribe {
+				break
+			}
+		}
+		return lastDescribeIndex
+	}
+
+	isNextStepSibling := func(s *step, i int) bool {
+		if i+1 < len(suite.steps) { // if there is a next step
+			next := suite.steps[i+1] // peek
+			if next.indent == s.indent && next.block == isDescribe {
+				return true
+			}
+		}
+		return false
+	}
+
+	for i := 0; i < len(suite.steps); i++ {
+		s := suite.steps[i]
 		if s.block == isDescribe && s.indent < indent {
 			if !lastSuiteEndsWithIt() {
 				copyStack()
 			}
-
-			lastDescribeIndex := len(stack) - 1
-			for i := len(stack) - 1; i >= 0; i-- {
-				step := stack[i]
-				lastDescribeIndex--
-				// TODO: only when we reach the describe block ?
-				if step.indent == s.indent {
-					break
-				}
-			}
-
-			if lastDescribeIndex == -1 {
-				stack = []*step{}
-				indent = -1
-			} else {
+			lastDescribeIndex := findLastSiblingIndex(s)
+			if lastDescribeIndex != 0 {
 				stack = stack[:lastDescribeIndex]
-				indent = stack[len(stack)-1].indent + 1
+				indent = stack[len(stack)-1].indent
 			}
 			stack = append(stack, s)
 			continue
 		}
 		if s.block == isDescribe && s.indent == indent {
-			copyStack()
-			stack = stack[:len(stack)-1]
+			if !lastSuiteEndsWithIt() {
+				copyStack()
+			}
+			stack = stack[:findLastSiblingIndex(s)]
 			stack = append(stack, s)
 			continue
 		}
 		if s.block == isDescribe && s.indent > indent {
 			stack = append(stack, s)
 			indent++
+			if isNextStepSibling(s, i) {
+				copyStack()
+			}
 			continue
 		}
 		if s.block == isBeforeEach {
@@ -113,9 +147,23 @@ func (suite *Suite) buildSuites() [][]*step {
 			stack = append(stack, s)
 			copyStack()
 			stack = stack[:len(stack)-1]
+			if i+1 < len(suite.steps) {
+				next := suite.steps[i+1] // peek
+				if len(stack) > 0 && next.indent < stack[len(stack)-1].indent {
+					stack = stack[:findLastSiblingIndex(s)]
+				}
+			} else {
+				stack = stack[:findLastSiblingIndex(s)]
+			}
 			continue
 		}
-		indent--
+	}
+
+	if len(stack) > 0 {
+		if len(stack) == 1 && lastSuiteStartsWithStep(stack[0]) {
+		} else {
+			copyStack()
+		}
 	}
 
 	return suites
@@ -150,15 +198,15 @@ func buildSuiteTitle(suite []*step) string {
 	return sb.String()
 }
 
-func debugSuitesAndSteps(suites [][]*step) {
-	for i, suite := range suites {
-		fmt.Printf("SUITE: %d\n", i)
-		for _, step := range suite {
-			fmt.Printf("STEP: %#v\n", step)
-		}
-		fmt.Println()
-	}
-}
+// func debugSuitesAndSteps(suites [][]*step) {
+// 	for i, suite := range suites {
+// 		fmt.Printf("SUITE: %d\n", i)
+// 		for _, step := range suite {
+// 			fmt.Printf("STEP: %#v\n", step)
+// 		}
+// 		fmt.Println()
+// 	}
+// }
 
 func (suite *Suite) Describe(title string, cb func()) {
 	suite.indent++
@@ -188,112 +236,4 @@ func (suite *Suite) It(title string, cb func()) {
 		block:  isIt,
 		cb:     cb,
 	})
-}
-
-type Chain struct {
-	To        *Chain
-	Be        *Chain
-	Of        *Chain
-	Have      *Chain
-	Not       *Chain
-	Contain   *Chain
-	True      func()
-	False     func()
-	EqualTo   func(expected any)
-	LengthOf  func(expected int)
-	Property  func(expected any)
-	Element   func(expected any)
-	Substring func(expected string)
-	Type      func(expected any)
-	Nil       func()
-}
-
-func (suite *Suite) Expect(value any) *Chain {
-	suite.t.Helper()
-	return &Chain{
-		Not: &Chain{
-			To: &Chain{
-				Be: &Chain{
-					Nil: func() {
-						// TODO: implement me
-					},
-				},
-			},
-		},
-		To: &Chain{
-			Contain: &Chain{
-				Substring: func(sub string) {
-					// TODO: implement me
-				},
-				Element: func(elem any) {
-					// TODO: implement me
-				},
-			},
-			Have: &Chain{
-				LengthOf: func(length int) {
-					suite.t.Helper()
-
-					kind := reflect.TypeOf(value).Kind()
-
-					if kind != reflect.Slice && kind != reflect.Array && kind != reflect.String {
-						suite.t.Errorf("expected target to be slice/array/slice but it was %s", kind)
-					}
-
-					if kind == reflect.String {
-						reflectValue := reflect.ValueOf(value)
-						if reflectValue.Len() != length {
-							suite.t.Errorf("expected %s to have length %d but it has %d", value, length, reflectValue.Len())
-						}
-						return
-					}
-
-					reflectValue := reflect.ValueOf(value)
-					if reflectValue.Len() != length {
-						suite.t.Errorf("expected %s to have length %d but it has %d", value, length, reflectValue.Len())
-					}
-				},
-				Property: func(prop any) {
-					// TODO: implement me
-				},
-			},
-			Be: &Chain{
-				Of: &Chain{
-					Type: func(expected any) {
-						// TODO: implement me
-					},
-				},
-				Nil: func() {
-					// TODO: implement me
-				},
-				True: func() {
-					suite.t.Helper()
-					v, ok := value.(bool)
-					if !ok {
-						suite.t.Errorf("expected test target to be bool but it was %s", reflect.TypeOf(value))
-						return
-					}
-					if v == false {
-						suite.t.Errorf("expected false but got true")
-					}
-				},
-				False: func() {
-					suite.t.Helper()
-					v, ok := value.(bool)
-					if !ok {
-						suite.t.Errorf("expected test target to be bool but it was %s", reflect.TypeOf(value))
-						return
-					}
-					if v != false {
-						suite.t.Errorf("expected false but got true")
-					}
-				},
-				EqualTo: func(expected any) {
-					suite.t.Helper()
-					if !reflect.DeepEqual(expected, value) {
-						suite.t.Errorf("does not equal")
-					}
-				},
-			},
-		},
-	}
 }
