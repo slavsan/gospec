@@ -95,10 +95,10 @@ func TestExpect(t *testing.T) {
 			{333, 334, 1, []string{"equality check failed\n\texpected: 334\n\t  actual: 333\n"}},
 			{int32(333), int64(333), 1, []string{"equality check failed\n\texpected: 333 (type: int64)\n\t  actual: 333 (type: int32)\n"}},
 			{"foo", "foo", 0, []string{}},
-			{"foo", "bar", 1, []string{"equality check failed\n\texpected: bar\n\t  actual: foo\n"}},
-			{"foo", 333, 1, []string{"equality check failed\n\texpected: 333 (type: int)\n\t  actual: foo (type: string)\n"}},
+			{"foo", "bar", 1, []string{"equality check failed\n\texpected: \"bar\"\n\t  actual: \"foo\"\n"}},
+			{"foo", 333, 1, []string{"equality check failed\n\texpected: 333 (type: int)\n\t  actual: \"foo\" (type: string)\n"}},
 			{[]string{}, []string{}, 0, []string{}},
-			{[]string{}, []string{"foo"}, 1, []string{"equality check failed\n\texpected: [foo]\n\t  actual: []\n"}},
+			{[]string{}, []string{"foo"}, 1, []string{"equality check failed\n\texpected: []string{\"foo\"}\n\t  actual: []string{}\n"}},
 		}
 		for _, tc := range testCases {
 			tc := tc
@@ -128,7 +128,7 @@ func TestExpect(t *testing.T) {
 			callsCount int
 			calls      []string
 		}{
-			{false, 1, []string{"expected false to be nil but it is not"}},
+			{false, 1, []string{"expected 'false' to be nil but it is not"}},
 			{nil, 0, []string{}},
 			{i, 0, []string{}},
 			{m, 0, []string{}},

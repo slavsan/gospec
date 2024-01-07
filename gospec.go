@@ -47,10 +47,10 @@ func (suite *Suite) report() {
 			continue
 		}
 		if s.block == isIt {
-			fmt.Printf("%s✓ %s (%d)\n", strings.Repeat("  ", s.indent+1), s.title, s.indent)
+			fmt.Printf("%s✓ %s\n", strings.Repeat("  ", s.indent+1), s.title)
 			continue
 		}
-		fmt.Printf("%s%s (%d)\n", strings.Repeat("  ", s.indent), s.title, s.indent)
+		fmt.Printf("%s%s\n", strings.Repeat("  ", s.indent), s.title)
 	}
 	fmt.Printf("\n")
 }
