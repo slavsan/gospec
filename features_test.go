@@ -1,13 +1,17 @@
 package gospec
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/slavsan/gospec/internal/testing/helpers/assert"
+)
 
 func TestFeature(t *testing.T) {
 	// ..
 
 	f := NewFeatureSuite(t)
-	feature, background, scenario, given, when, then, world, table, expect, start :=
-		f.Feature, f.Background, f.Scenario, f.Given, f.When, f.Then, f.World, f.Table, f.Expect, f.Start
+	feature, background, scenario, given, when, then, world, table, start :=
+		f.Feature, f.Background, f.Scenario, f.Given, f.When, f.Then, f.World, f.Table, f.Start
 	defer start()
 
 	_ = world
@@ -64,7 +68,7 @@ func TestFeature(t *testing.T) {
 			})
 			then("the cart should be 0 again", func() {
 				// ..
-				expect(cart).To.Be.EqualTo(0)
+				assert.Equal(t, 0, cart)
 			})
 			// ...
 		})
@@ -80,7 +84,7 @@ func TestFeature(t *testing.T) {
 			})
 			then("the cart should be 0 again", func() {
 				// ..
-				expect(cart).To.Be.EqualTo(0)
+				assert.Equal(t, 0, cart)
 			})
 			// ...
 		})
