@@ -12,7 +12,6 @@ type mock struct {
 	t          *testing.T
 	calls      [][]any
 	testTitles []string
-	//
 }
 
 func (m *mock) Helper() {
@@ -548,89 +547,70 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 	}, "\n"), out.String())
 }
 
-//func TestFeature(t *testing.T) {
-//	// ..
-//
-//	f := gospec.NewFeatureSuite(t)
-//	feature, background, scenario, given, when, then, world, table, start := f.API()
-//	defer start()
-//
-//	_ = world
-//
-//	feature("Checkout", func() {
-//		type Product struct {
-//			Name  string
-//			Price float64
-//			Type  int
-//			// ..
-//		}
-//
-//		var (
-//			customer       string
-//			cart           []string
-//			appliedCoupons []string
-//			items          []Product
-//		)
-//
-//		_ = customer
-//		_ = cart
-//		_ = appliedCoupons
-//
-//		background("", func() {
-//			given("there is a customer account", func() {
-//				customer = "John Doe"
-//				// world.Define(func() {
-//				// 	world.Var("foo", "bar")
-//				// 	world.Var("spam", "eggs")
-//				// })
-//			})
-//			given("the cart has 2 items", func() {
-//				items = []Product{
-//					{Name: "Gopher toy", Price: 14.99, Type: 2},
-//					{Name: "Crab toy", Price: 17.49, Type: 8},
-//				}
-//				table([]string{"Name", "Price"}, items)
-//				// ..
-//			})
-//			given("no coupons are applied", func() {
-//				appliedCoupons = []string{}
-//			})
-//			// ..
-//		})
-//
-//		scenario("with no coupons", func() {
-//			given("has the correct total price of both items", func() {
-//				cart = []string{}
-//				// ..
-//			})
-//			when("the customer checks out", func() {
-//				cart = []string{}
-//				cart = append(cart, "Gopher toy")
-//				// ..
-//			})
-//			then("the cart should be 0 again", func() {
-//				// ..
-//				assert.Equal(t, []string{"Gopher toy"}, cart)
-//			})
-//			// ...
-//		})
-//
-//		scenario("with coupon applied", func() {
-//			given("has the correct total price of both items", func() {
-//				cart = []string{}
-//				// ..
-//			})
-//			when("the customer checks out", func() {
-//				cart = []string{}
-//				// ..
-//			})
-//			then("the cart should be 0 again", func() {
-//				// ..
-//				assert.Equal(t, []string{}, cart)
-//			})
-//			// ...
-//		})
-//	})
-//
-//	// debugFeature(f)
-//}
+func TestTableOutput(t *testing.T) {
+	var (
+		out         bytes.Buffer
+		testingMock = &mock{}
+		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
+		feature     = spec.Feature
+		scenario    = spec.Scenario
+		given       = spec.Given
+		when        = spec.When
+		then        = spec.Then
+		table       = spec.Table
+	)
+
+	feature("Checkout", func() {
+		type Product struct {
+			Name  string
+			Price float64
+			Type  int
+		}
+
+		var (
+			items []Product
+		)
+
+		scenario("scenario 1", func() {
+			given("given 1", func() {
+				// ..
+			})
+			when("when 1", func() {})
+			then("then 1", func() {
+				items = []Product{
+					{Name: "Gopher toy", Price: 14.99, Type: 2},
+					{Name: "Crab toy", Price: 17.49, Type: 8},
+				}
+				table([]string{"Name", "Price"}, items)
+			})
+		})
+	})
+
+	assert.Equal(t, [][]any(nil), testingMock.calls)
+	assert.Equal(t, 0, len(spec.stack))
+	assert.Equal(t, 1, len(spec.suites))
+	assert.Equal(t, 5, len(spec.suites[0]))
+	assert.Equal(t, "Checkout", spec.suites[0][0].title)
+	assert.Equal(t, "scenario 1", spec.suites[0][1].title)
+	assert.Equal(t, "given 1", spec.suites[0][2].title)
+	assert.Equal(t, "when 1", spec.suites[0][3].title)
+	assert.Equal(t, "then 1", spec.suites[0][4].title)
+
+	assert.Equal(t, []string{
+		"Checkout/scenario 1",
+	}, testingMock.testTitles)
+
+	assert.Equal(t, strings.Join([]string{
+		`Feature: Checkout`,
+		``,
+		`	Scenario: scenario 1`,
+		`		Given: given 1`,
+		`		When: when 1`,
+		`		Then: then 1`,
+		`			| Name       | Price |`,
+		`			| Gopher toy | 14.99 |`,
+		`			| Crab toy   | 17.49 |`,
+		``,
+		``,
+	}, "\n"), out.String())
+}

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -18,7 +20,6 @@ const (
 	isGiven
 	isWhen
 	isThen
-	isTable
 )
 
 type featureStep struct {
@@ -107,6 +108,7 @@ func (fs *FeatureSuite) Feature(title string, cb func()) {
 	fs.pushStack(s)
 
 	cb()
+
 	// check if last there is a new suite added, if not, copy the stack here...
 	fs.popBackgroundFromStackIfExists()
 	fs.popStack(s)
@@ -316,102 +318,78 @@ func (fs *FeatureSuite) copyStack() {
 
 func (fs *FeatureSuite) Table(columns []string, items interface{}) {
 	fs.t.Helper()
-	//fs.steps = append(fs.steps, &featureStep{
-	//	kind: isTable,
-	//	// title: title,
-	//	// cb:    cb,
-	//	cb: func() {
-	//		// ..
-	//		// fmt.Println()
-	//		// fmt.Printf("      XXXX\n")
-	//		items2 := reflect.ValueOf(items)
-	//		// fmt.Printf("ITEMS: %#v\n", items2)
-	//		// fmt.Println()
-	//
-	//		if items2.Kind() != reflect.Slice {
-	//			panic("EXPECTED SLICE...\n")
-	//			return
-	//		}
-	//
-	//		columnWidths := make(map[string]int, items2.Len())
-	//		_ = columnWidths
-	//
-	//		for _, x := range columns {
-	//			columnWidths[x] = len(x)
-	//		}
-	//
-	//		rows := []map[string]string{}
-	//
-	//		for i := 0; i < items2.Len(); i++ {
-	//			item := items2.Index(i)
-	//			if item.Kind() == reflect.Struct {
-	//				row := map[string]string{}
-	//				v := reflect.Indirect(item)
-	//				for j := 0; j < v.NumField(); j++ {
-	//					name := v.Type().Field(j).Name
-	//					value := v.Field(j).Interface()
-	//					max, ok := columnWidths[name]
-	//					if !ok {
-	//						continue
-	//					}
-	//					switch z := value.(type) {
-	//					case string:
-	//						if len(z) > max {
-	//							columnWidths[name] = len(z)
-	//						}
-	//						row[name] = z
-	//					case float64, float32:
-	//						ff := fmt.Sprintf("%.2f", z)
-	//						if len(ff) > max {
-	//							columnWidths[name] = len(ff)
-	//						}
-	//						row[name] = ff
-	//						// ff, err := strconv.ParseFloat(z)
-	//						// _ = ff
-	//						// _ = err
-	//					case int, int8, int16, int32, int64:
-	//						ff := fmt.Sprintf("%d", z)
-	//						if len(ff) > max {
-	//							columnWidths[name] = len(ff)
-	//						}
-	//						row[name] = ff
-	//						// ff, err := strconv.ParseFloat(z)
-	//						// _ = ff
-	//						// _ = err
-	//					}
-	//					// fmt.Println(name, value)
-	//				}
-	//				rows = append(rows, row)
-	//			}
-	//		}
-	//		var sb strings.Builder
-	//		sb.WriteString("      |")
-	//		for _, c := range columns {
-	//			_ = c
-	//			sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", c))
-	//			//
-	//			sb.WriteString("|")
-	//		}
-	//		sb.WriteString("\n")
-	//
-	//		for _, r := range rows {
-	//			_ = r
-	//			sb.WriteString("      |")
-	//			for _, c := range columns {
-	//				sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", r[c]))
-	//				_ = c
-	//
-	//				sb.WriteString("|")
-	//			}
-	//			sb.WriteString("\n")
-	//		}
-	//
-	//		fmt.Printf("%s", sb.String())
-	//		// fmt.Printf("ROWS: %#v\n", rows)
-	//		// fmt.Printf("COLUMN WIDTHS: %#v\n", columnWidths)
-	//		// fmt.Println()
-	//	},
-	//})
+
+	// TODO: validate table was called in valid call site
+
+	items2 := reflect.ValueOf(items)
+
+	if items2.Kind() != reflect.Slice {
+		panic("EXPECTED SLICE...\n")
+		return
+	}
+
+	columnWidths := make(map[string]int, items2.Len())
+	_ = columnWidths
+
+	for _, x := range columns {
+		columnWidths[x] = len(x)
+	}
+
+	var rows []map[string]string
+
+	for i := 0; i < items2.Len(); i++ {
+		item := items2.Index(i)
+		if item.Kind() == reflect.Struct {
+			row := map[string]string{}
+			v := reflect.Indirect(item)
+			for j := 0; j < v.NumField(); j++ {
+				name := v.Type().Field(j).Name
+				value := v.Field(j).Interface()
+				maxWidth, ok := columnWidths[name]
+				if !ok {
+					continue
+				}
+				switch z := value.(type) {
+				case string:
+					if len(z) > maxWidth {
+						columnWidths[name] = len(z)
+					}
+					row[name] = z
+				case float64, float32:
+					ff := fmt.Sprintf("%.2f", z)
+					if len(ff) > maxWidth {
+						columnWidths[name] = len(ff)
+					}
+					row[name] = ff
+				case int, int8, int16, int32, int64:
+					ff := fmt.Sprintf("%d", z)
+					if len(ff) > maxWidth {
+						columnWidths[name] = len(ff)
+					}
+					row[name] = ff
+				}
+			}
+			rows = append(rows, row)
+		}
+	}
+	fs.report.WriteString("\t\t\t|")
+	for _, c := range columns {
+		fs.report.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", c))
+		fs.report.WriteString("|")
+	}
+	fs.report.WriteString("\n")
+
+	for _, r := range rows {
+		_ = r
+		fs.report.WriteString("\t\t\t|")
+		for _, c := range columns {
+			fs.report.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", r[c]))
+			_ = c
+
+			fs.report.WriteString("|")
+		}
+		fs.report.WriteString("\n")
+	}
 }
 
 func (fs *FeatureSuite) World() *World {
@@ -444,92 +422,3 @@ func (fs *FeatureSuite) start() {
 		})
 	}
 }
-
-//func debugFeature(fs *FeatureSuite) {
-//	fmt.Printf("FEATURE: %#v\n", fs)
-//	for _, s := range fs.steps {
-//		fmt.Printf("STEP: %#v\n", s)
-//	}
-//}
-
-//func printFeature(fs *FeatureSuite) {
-//	// var (
-//	// 	inBackground bool
-//	// 	inScenario   bool
-//	// )
-//	var (
-//		lastStep featureStepKind
-//	)
-//
-//	for _, s := range fs.steps {
-//		if s.kind == isFeature {
-//			fmt.Printf("Feature: %s\n", s.title)
-//			lastStep = s.kind
-//			continue
-//		}
-//
-//		if s.kind == isBackground {
-//			fmt.Printf("\n  Background: %s\n", s.title)
-//			// inBackground = true
-//			lastStep = s.kind
-//			continue
-//		}
-//
-//		if s.kind == isScenario {
-//			fmt.Printf("\n  Scenario: %s\n", s.title)
-//			// inScenario = true
-//			// inBackground = false
-//			lastStep = s.kind
-//			continue
-//		}
-//
-//		if s.kind == isGiven {
-//			if lastStep == s.kind {
-//				fmt.Printf("    And %s\n", s.title)
-//				continue
-//			}
-//			fmt.Printf("    Given %s\n", s.title)
-//			lastStep = s.kind
-//			continue
-//			// ..
-//		}
-//
-//		if s.kind == isWhen {
-//			if lastStep == s.kind {
-//				fmt.Printf("    And %s\n", s.title)
-//				continue
-//			}
-//			fmt.Printf("    When %s\n", s.title)
-//			lastStep = s.kind
-//			continue
-//			// ..
-//		}
-//
-//		if s.kind == isThen {
-//			if lastStep == s.kind {
-//				fmt.Printf("    And %s\n", s.title)
-//				continue
-//			}
-//			fmt.Printf("    Then %s\n", s.title)
-//			lastStep = s.kind
-//			continue
-//			// ..
-//		}
-//
-//		if s.kind == isTable {
-//			// fmt.Printf("      TABLE HERE...\n")
-//			s.cb()
-//			// if lastStep == s.kind {
-//			// 	fmt.Printf("    And %s\n", s.title)
-//			// 	continue
-//			// }
-//			// fmt.Printf("    Then %s\n", s.title)
-//			// lastStep = s.kind
-//			continue
-//			// ..
-//		}
-//
-//		// fmt.Printf("STEP: %#v\n", s)
-//	}
-//	fmt.Println()
-//}
