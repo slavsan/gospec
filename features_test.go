@@ -279,8 +279,8 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 		testingMock = &mock{t: t}
 		mockAssert  = &assertMock{}
 		spec        = NewFeatureSuite(testingMock)
-		feature, background, scenario, given,
-		when, then, world, table, start = spec.API()
+		feature, background, scenario,
+		given, when, then, world, table = spec.API()
 	)
 
 	_ = world
@@ -329,11 +329,55 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 		})
 	})
 
-	start()
+	feature("Checkout 11", func() {
+		var nums []int
+
+		background("background 11", func() {
+			given("given 11", func() {
+				nums = []int{}
+				nums = append(nums, 11)
+			})
+			given("when 11", func() {
+				nums = append(nums, 12)
+			})
+			given("then 11", func() {
+				nums = append(nums, 13)
+			})
+		})
+
+		scenario("scenario 11", func() {
+			given("given 12", func() {
+				nums = append(nums, 14)
+			})
+			when("when 12", func() {
+				nums = append(nums, 15)
+			})
+			then("then 12", func() {
+				nums = append(nums, 16)
+				mockAssert.Assert(nums)
+			})
+		})
+
+		scenario("scenario 11", func() {
+			given("given 12", func() {
+				nums = append(nums, 17)
+			})
+			when("when 12", func() {
+				nums = append(nums, 18)
+			})
+			then("then 12", func() {
+				nums = append(nums, 19)
+				mockAssert.Assert(nums)
+			})
+		})
+	})
 
 	assert.Equal(t, [][]any(nil), testingMock.calls)
-	assert.Equal(t, 2, len(mockAssert.calls))
+	assert.Equal(t, 4, len(mockAssert.calls))
+	assert.Equal(t, []any{[]int{1, 2, 3, 4, 5, 6}}, mockAssert.calls[0])
 	assert.Equal(t, []any{[]int{1, 2, 3, 7, 8, 9}}, mockAssert.calls[1])
+	assert.Equal(t, []any{[]int{11, 12, 13, 14, 15, 16}}, mockAssert.calls[2])
+	assert.Equal(t, []any{[]int{11, 12, 13, 17, 18, 19}}, mockAssert.calls[3])
 }
 
 //func TestFeature(t *testing.T) {

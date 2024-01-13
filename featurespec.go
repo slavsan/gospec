@@ -32,15 +32,14 @@ type World struct {
 }
 
 type FeatureSuite struct {
-	t     testingInterface
-	world *World
-	//steps        []*featureStep
+	t               testingInterface
+	world           *World
 	stack           []*featureStep
 	backgroundStack []*featureStep
 	suites          [][]*featureStep
 	indent          int
 	inBackground    bool
-	//prevKind featureStepKind
+	atSuiteIndex    int
 }
 
 func NewFeatureSuite(t testingInterface) *FeatureSuite {
@@ -61,10 +60,9 @@ func (fs *FeatureSuite) API() (
 	func(string, func()),
 	func() *World,
 	func(columns []string, items interface{}),
-	func(),
 ) {
 	return fs.Feature, fs.Background, fs.Scenario, fs.Given,
-		fs.When, fs.Then, fs.World, fs.Table, fs.Start
+		fs.When, fs.Then, fs.World, fs.Table
 }
 
 func (fs *FeatureSuite) prevKind() featureStepKind {
@@ -93,6 +91,13 @@ func (fs *FeatureSuite) Feature(title string, cb func()) {
 	fs.popBackgroundFromStackIfExists()
 	fs.popStack(s)
 	fs.backgroundStack = []*featureStep{}
+
+	if len(fs.stack) > 0 {
+		fs.t.Errorf("expected stack to be empty but it has %d steps", len(fs.stack))
+		return
+	}
+
+	fs.start()
 }
 
 func (fs *FeatureSuite) pushStack(s *featureStep) {
@@ -393,8 +398,9 @@ func buildSuiteTitleForFeature(suite []*featureStep) string {
 	return sb.String()
 }
 
-func (fs *FeatureSuite) Start() {
-	for _, suite := range fs.suites {
+func (fs *FeatureSuite) start() {
+	for _, suite := range fs.suites[fs.atSuiteIndex:] {
+		fs.atSuiteIndex++
 		fs.t.Run(buildSuiteTitleForFeature(suite), func(t *testing.T) {
 			for _, s := range suite {
 				if s.cb != nil {
