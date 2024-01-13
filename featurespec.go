@@ -1,0 +1,424 @@
+package gospec
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
+	"testing"
+)
+
+type featureStepKind int
+
+const (
+	isUndefined featureStepKind = iota
+	isFeature
+	isBackground
+	isScenario
+	isGiven
+	isWhen
+	isThen
+)
+
+type featureStep struct {
+	indent int
+	kind   featureStepKind
+	title  string
+	cb     func()
+	// ..
+}
+
+type World struct {
+	// ..
+	suite *FeatureSuite
+}
+
+type FeatureSuite struct {
+	t               testingInterface
+	world           *World
+	stack           []*featureStep
+	backgroundStack []*featureStep
+	suites          [][]*featureStep
+	indent          int
+	inBackground    bool
+	atSuiteIndex    int
+	out             io.Writer
+	report          strings.Builder
+}
+
+type Option func(*FeatureSuite)
+
+func WithOutput(w io.Writer) Option {
+	return func(fs *FeatureSuite) {
+		fs.out = w
+	}
+}
+
+func NewFeatureSuite(t testingInterface, options ...Option) *FeatureSuite {
+	fs := &FeatureSuite{
+		t:     t,
+		world: &World{},
+		out:   os.Stdout,
+	}
+	fs.world.suite = fs
+	for _, o := range options {
+		o(fs)
+	}
+	return fs
+}
+
+func (fs *FeatureSuite) API() (
+	func(string, func()),
+	func(string, func()),
+	func(string, func()),
+	func(string, func()),
+	func(string, func()),
+	func(string, func()),
+	func() *World,
+	func(columns []string, items interface{}),
+) {
+	return fs.Feature, fs.Background, fs.Scenario, fs.Given,
+		fs.When, fs.Then, fs.World, fs.Table
+}
+
+func (fs *FeatureSuite) prevKind() featureStepKind {
+	fs.t.Helper()
+	if len(fs.stack) == 0 {
+		return isUndefined
+	}
+	return fs.stack[len(fs.stack)-1].kind
+}
+
+func (fs *FeatureSuite) Feature(title string, cb func()) {
+	fs.report = strings.Builder{}
+	fs.t.Helper()
+	if fs.prevKind() != isUndefined {
+		fs.t.Errorf("invalid position for `Feature` function, it must be at top level")
+		return
+	}
+
+	fs.report.WriteString(fmt.Sprintf("Feature: %s\n", title))
+
+	s := &featureStep{
+		kind:  isFeature,
+		title: title,
+	}
+	fs.pushStack(s)
+
+	cb()
+
+	// check if last there is a new suite added, if not, copy the stack here...
+	fs.popBackgroundFromStackIfExists()
+	fs.popStack(s)
+	fs.backgroundStack = []*featureStep{}
+
+	if len(fs.stack) > 0 {
+		fs.t.Errorf("expected stack to be empty but it has %d steps", len(fs.stack))
+		return
+	}
+
+	fs.start()
+
+	fs.report.WriteString("\n")
+	_, _ = fs.out.Write([]byte(fs.report.String()))
+}
+
+func (fs *FeatureSuite) pushStack(s *featureStep) {
+	fs.t.Helper()
+	fs.stack = append(fs.stack, s)
+}
+
+func (fs *FeatureSuite) pushToBackgroundStack(s *featureStep) {
+	fs.t.Helper()
+	fs.backgroundStack = append(fs.backgroundStack, s)
+}
+
+func (fs *FeatureSuite) popBackgroundFromStackIfExists() {
+	fs.t.Helper()
+	if len(fs.stack) == 0 {
+		return
+	}
+
+	lastStep := fs.stack[len(fs.stack)-1]
+	if lastStep.kind == isBackground {
+		fs.stack = fs.stack[:len(fs.stack)-1]
+	}
+}
+
+func (fs *FeatureSuite) popStack(s *featureStep) {
+	fs.t.Helper()
+	if len(fs.stack) == 0 {
+		fs.t.Errorf("unexpected empty stack")
+		return
+	}
+
+	lastStep := fs.stack[len(fs.stack)-1]
+	if lastStep != s {
+		fs.t.Errorf("unexpected step")
+		return
+	}
+
+	fs.stack = fs.stack[:len(fs.stack)-1]
+}
+
+func (fs *FeatureSuite) popStackUntilStep(s *featureStep) {
+	fs.t.Helper()
+	if len(fs.stack) == 0 {
+		fs.t.Errorf("unexpected empty stack")
+		return
+	}
+
+	index := fs.findIndexOfStep(s)
+	if index < 0 {
+		return
+	}
+
+	if index+1 > len(fs.stack) {
+		fs.t.Errorf("out of bound index")
+		return
+	}
+
+	fs.stack = fs.stack[:index+1]
+}
+
+func (fs *FeatureSuite) findIndexOfStep(s *featureStep) int {
+	fs.t.Helper()
+	if len(fs.stack) == 0 {
+		return -1
+	}
+
+	for i := len(fs.stack) - 1; i >= 0; i-- {
+		if fs.stack[i] == s {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func (fs *FeatureSuite) Background(title string, cb func()) {
+	fs.t.Helper()
+	if fs.prevKind() != isFeature {
+		fs.t.Errorf("invalid position for `Background` function, it must be inside a `Feature` call")
+		return
+	}
+
+	fs.report.WriteString(fmt.Sprintf("\n\tBackground: %s\n", title))
+
+	s := &featureStep{
+		kind:  isBackground,
+		title: title,
+	}
+
+	fs.inBackground = true
+	fs.pushToBackgroundStack(s)
+
+	cb()
+
+	fs.inBackground = false
+}
+
+func (fs *FeatureSuite) Scenario(title string, cb func()) {
+	fs.t.Helper()
+	if fs.prevKind() != isFeature && fs.prevKind() != isBackground {
+		fs.t.Errorf("invalid position for `Scenario` function, it must be inside a `Feature` call")
+		return
+	}
+
+	fs.report.WriteString(fmt.Sprintf("\n\tScenario: %s\n", title))
+
+	s := &featureStep{
+		kind:  isScenario,
+		title: title,
+	}
+	fs.pushStack(s)
+
+	cb()
+
+	if len(fs.stack) > 0 {
+		fs.copyStack()
+		fs.popStackUntilStep(s)
+	}
+
+	fs.popStack(s)
+}
+
+func (fs *FeatureSuite) Given(title string, cb func()) {
+	fs.t.Helper()
+
+	fs.report.WriteString(fmt.Sprintf("\t\tGiven: %s\n", title))
+
+	s := &featureStep{
+		kind:  isGiven,
+		title: title,
+		cb:    cb,
+	}
+	if fs.inBackground {
+		fs.pushToBackgroundStack(s)
+	} else {
+		fs.pushStack(s)
+	}
+}
+
+func (fs *FeatureSuite) When(title string, cb func()) {
+	fs.t.Helper()
+
+	fs.report.WriteString(fmt.Sprintf("\t\tWhen: %s\n", title))
+
+	s := &featureStep{
+		kind:  isWhen,
+		title: title,
+		cb:    cb,
+	}
+
+	if fs.inBackground {
+		fs.pushToBackgroundStack(s)
+	} else {
+		fs.pushStack(s)
+	}
+}
+
+func (fs *FeatureSuite) Then(title string, cb func()) {
+	fs.t.Helper()
+
+	fs.report.WriteString(fmt.Sprintf("\t\tThen: %s\n", title))
+
+	s := &featureStep{
+		kind:  isThen,
+		title: title,
+		cb:    cb,
+	}
+	if fs.inBackground {
+		fs.pushToBackgroundStack(s)
+	} else {
+		fs.pushStack(s)
+	}
+}
+
+func (fs *FeatureSuite) copyStack() {
+	fs.t.Helper()
+	if len(fs.stack) <= 0 {
+		return
+	}
+
+	var suite []*featureStep
+	for _, s := range fs.stack[:1] {
+		suite = append(suite, s)
+	}
+	for _, s := range fs.backgroundStack {
+		suite = append(suite, s)
+	}
+	for _, s := range fs.stack[1:] {
+		suite = append(suite, s)
+	}
+	fs.suites = append(fs.suites, suite)
+}
+
+func (fs *FeatureSuite) Table(columns []string, items interface{}) {
+	fs.t.Helper()
+
+	// TODO: validate table was called in valid call site
+
+	items2 := reflect.ValueOf(items)
+
+	if items2.Kind() != reflect.Slice {
+		panic("EXPECTED SLICE...\n")
+		return
+	}
+
+	columnWidths := make(map[string]int, items2.Len())
+	_ = columnWidths
+
+	for _, x := range columns {
+		columnWidths[x] = len(x)
+	}
+
+	var rows []map[string]string
+
+	for i := 0; i < items2.Len(); i++ {
+		item := items2.Index(i)
+		if item.Kind() == reflect.Struct {
+			row := map[string]string{}
+			v := reflect.Indirect(item)
+			for j := 0; j < v.NumField(); j++ {
+				name := v.Type().Field(j).Name
+				value := v.Field(j).Interface()
+				maxWidth, ok := columnWidths[name]
+				if !ok {
+					continue
+				}
+				switch z := value.(type) {
+				case string:
+					if len(z) > maxWidth {
+						columnWidths[name] = len(z)
+					}
+					row[name] = z
+				case float64, float32:
+					ff := fmt.Sprintf("%.2f", z)
+					if len(ff) > maxWidth {
+						columnWidths[name] = len(ff)
+					}
+					row[name] = ff
+				case int, int8, int16, int32, int64:
+					ff := fmt.Sprintf("%d", z)
+					if len(ff) > maxWidth {
+						columnWidths[name] = len(ff)
+					}
+					row[name] = ff
+				}
+			}
+			rows = append(rows, row)
+		}
+	}
+	fs.report.WriteString("\t\t\t|")
+	for _, c := range columns {
+		fs.report.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", c))
+		fs.report.WriteString("|")
+	}
+	fs.report.WriteString("\n")
+
+	for _, r := range rows {
+		_ = r
+		fs.report.WriteString("\t\t\t|")
+		for _, c := range columns {
+			fs.report.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", r[c]))
+			_ = c
+
+			fs.report.WriteString("|")
+		}
+		fs.report.WriteString("\n")
+	}
+}
+
+func (fs *FeatureSuite) World() *World {
+	fs.t.Helper()
+	return fs.world
+}
+
+func buildSuiteTitleForFeature(suite []*featureStep) string {
+	var sb strings.Builder
+	for i, s := range suite {
+		if s.kind == isFeature || s.kind == isScenario {
+			if i != 0 {
+				sb.WriteString("/")
+			}
+			sb.WriteString(strings.TrimSpace(s.title))
+		}
+	}
+	return sb.String()
+}
+
+func (fs *FeatureSuite) start() {
+	for _, suite := range fs.suites[fs.atSuiteIndex:] {
+		fs.atSuiteIndex++
+		fs.t.Run(buildSuiteTitleForFeature(suite), func(t *testing.T) {
+			for _, s := range suite {
+				if s.cb != nil {
+					s.cb()
+				}
+			}
+		})
+	}
+}

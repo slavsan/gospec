@@ -3,12 +3,14 @@ package gospec
 import (
 	"fmt"
 	"testing"
+
+	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
 
 func TestExampleSuite(t *testing.T) {
 	s := NewTestSuite(t)
-	describe, context, it, beforeEach, expect, start :=
-		s.Describe, s.Describe, s.It, s.BeforeEach, s.Expect, s.Start
+	describe, context, it, beforeEach, start :=
+		s.Describe, s.Describe, s.It, s.BeforeEach, s.Start
 	defer start()
 
 	describe("Checkout", func() {
@@ -20,17 +22,17 @@ func TestExampleSuite(t *testing.T) {
 				cart = []string{"Gopher toy"}
 			})
 			it("should have 1 item in the cart", func() {
-				expect(cart).To.Have.LengthOf(1)
+				assert.Equal(t, 1, len(cart))
 			})
 			it("should have no coupon applied by default", func() {
-				expect(appliedCoupons).To.Have.LengthOf(0)
+				assert.Equal(t, 0, len(appliedCoupons))
 			})
 			context("when we add one more item to the cart", func() {
 				beforeEach(func() {
 					cart = append(cart, "Crab toy")
 				})
 				it("should have 2 items in the cart", func() {
-					expect(cart).To.Have.LengthOf(2)
+					assert.Equal(t, 2, len(cart))
 				})
 				context("when the coupon is eligible for this purchase", func() {
 					context("and the coupon gets applied", func() {
@@ -52,7 +54,7 @@ func TestExampleSuite(t *testing.T) {
 		context("when shopping cart is empty", func() {
 			var cart []string
 			it("should have 0 items", func() {
-				expect(cart).To.Have.LengthOf(0)
+				assert.Equal(t, 0, len(cart))
 			})
 		})
 	})
@@ -64,7 +66,7 @@ func TestExampleSuite(t *testing.T) {
 				signedUp = true
 			})
 			it("should be signed up", func() {
-				expect(signedUp).To.Be.True()
+				assert.Equal(t, true, signedUp)
 			})
 		})
 	})
@@ -72,8 +74,8 @@ func TestExampleSuite(t *testing.T) {
 
 func TestDescribe(t *testing.T) {
 	s := NewTestSuite(t)
-	describe, context, it, beforeEach, expect, start :=
-		s.Describe, s.Describe, s.It, s.BeforeEach, s.Expect, s.Start
+	describe, context, it, beforeEach, start :=
+		s.Describe, s.Describe, s.It, s.BeforeEach, s.Start
 	defer start()
 
 	describe("describe block", func() {
@@ -91,12 +93,12 @@ func TestDescribe(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 1 step defined", func() {
-				expect(s2.steps).To.Have.LengthOf(1)
+				assert.Equal(t, 1, len(s2.steps))
 			})
 			it("should have just one suite with just one step defined", func() {
-				expect(suites).To.Have.LengthOf(1)
-				expect(suites[0]).To.Have.LengthOf(1)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("testing describe")
+				assert.Equal(t, 1, len(suites))
+				assert.Equal(t, 1, len(suites[0]))
+				assert.Equal(t, "testing describe", buildSuiteTitle(suites[0]))
 			})
 		})
 		context("with two sibling describes", func() {
@@ -115,14 +117,14 @@ func TestDescribe(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 2 steps defined", func() {
-				expect(s2.steps).To.Have.LengthOf(2)
+				assert.Equal(t, 2, len(s2.steps))
 			})
 			it("should have just two suites with just one step defined", func() {
-				expect(suites).To.Have.LengthOf(2)
-				expect(suites[0]).To.Have.LengthOf(1)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("describe")
-				expect(suites[1]).To.Have.LengthOf(1)
-				expect(buildSuiteTitle(suites[1])).To.Be.EqualTo("sibling describe")
+				assert.Equal(t, 2, len(suites))
+				assert.Equal(t, 1, len(suites[0]))
+				assert.Equal(t, "describe", buildSuiteTitle(suites[0]))
+				assert.Equal(t, 1, len(suites[1]))
+				assert.Equal(t, "sibling describe", buildSuiteTitle(suites[1]))
 			})
 		})
 		context("with two describes, one parent and one child", func() {
@@ -141,12 +143,12 @@ func TestDescribe(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 2 steps defined", func() {
-				expect(s2.steps).To.Have.LengthOf(2)
+				assert.Equal(t, 2, len(s2.steps))
 			})
 			it("should have just one suite with just one step defined", func() {
-				expect(suites).To.Have.LengthOf(1)
-				expect(suites[0]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("parent describe/child describe")
+				assert.Equal(t, 1, len(suites))
+				assert.Equal(t, 2, len(suites[0]))
+				assert.Equal(t, "parent describe/child describe", buildSuiteTitle(suites[0]))
 			})
 		})
 		context("with three nested describes", func() {
@@ -167,12 +169,12 @@ func TestDescribe(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 3 steps defined", func() {
-				expect(s2.steps).To.Have.LengthOf(3)
+				assert.Equal(t, 3, len(s2.steps))
 			})
 			it("should have just one suite with just one step defined", func() {
-				expect(suites).To.Have.LengthOf(1)
-				expect(suites[0]).To.Have.LengthOf(3)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("top most describe/nested describe/most nested describe")
+				assert.Equal(t, 1, len(suites))
+				assert.Equal(t, 3, len(suites[0]))
+				assert.Equal(t, "top most describe/nested describe/most nested describe", buildSuiteTitle(suites[0]))
 			})
 		})
 	})
@@ -180,8 +182,8 @@ func TestDescribe(t *testing.T) {
 
 func TestIt(t *testing.T) {
 	s := NewTestSuite(t)
-	describe, context, it, beforeEach, expect, start :=
-		s.Describe, s.Describe, s.It, s.BeforeEach, s.Expect, s.Start
+	describe, context, it, beforeEach, start :=
+		s.Describe, s.Describe, s.It, s.BeforeEach, s.Start
 	defer start()
 
 	describe("it block", func() {
@@ -201,12 +203,12 @@ func TestIt(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 2 steps defined", func() {
-				expect(s2.steps).To.Have.LengthOf(2)
+				assert.Equal(t, 2, len(s2.steps))
 			})
 			it("should have just 1 suite with just 2 steps defined", func() {
-				expect(suites).To.Have.LengthOf(1)
-				expect(suites[0]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("testing describe/testing it")
+				assert.Equal(t, 1, len(suites))
+				assert.Equal(t, 2, len(suites[0]))
+				assert.Equal(t, "testing describe/testing it", buildSuiteTitle(suites[0]))
 			})
 		})
 		context("with single describe and two it blocks", func() {
@@ -227,14 +229,14 @@ func TestIt(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 3 steps defined", func() {
-				expect(s2.steps).To.Have.LengthOf(3)
+				assert.Equal(t, 3, len(s2.steps))
 			})
 			it("should have 2 suites with just 2 steps defined in each", func() {
-				expect(suites).To.Have.LengthOf(2)
-				expect(suites[0]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("testing describe/testing it")
-				expect(suites[1]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[1])).To.Be.EqualTo("testing describe/testing another it")
+				assert.Equal(t, 2, len(suites))
+				assert.Equal(t, 2, len(suites[0]))
+				assert.Equal(t, "testing describe/testing it", buildSuiteTitle(suites[0]))
+				assert.Equal(t, 2, len(suites[1]))
+				assert.Equal(t, "testing describe/testing another it", buildSuiteTitle(suites[1]))
 			})
 		})
 		context("with two describe blocks and one it block in each", func() {
@@ -259,14 +261,14 @@ func TestIt(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 4 steps defined", func() {
-				expect(s2.steps).To.Have.LengthOf(4)
+				assert.Equal(t, 4, len(s2.steps))
 			})
 			it("should have 2 suites with just 2 steps defined in each", func() {
-				expect(suites).To.Have.LengthOf(2)
-				expect(suites[0]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("testing describe/testing it")
-				expect(suites[1]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[1])).To.Be.EqualTo("testing another describe/testing another it")
+				assert.Equal(t, 2, len(suites))
+				assert.Equal(t, 2, len(suites[0]))
+				assert.Equal(t, "testing describe/testing it", buildSuiteTitle(suites[0]))
+				assert.Equal(t, 2, len(suites[1]))
+				assert.Equal(t, "testing another describe/testing another it", buildSuiteTitle(suites[1]))
 			})
 		})
 		context("with two describe blocks and two it blocks in each", func() {
@@ -295,18 +297,18 @@ func TestIt(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 6 steps defined", func() {
-				expect(s2.steps).To.Have.LengthOf(6)
+				assert.Equal(t, 6, len(s2.steps))
 			})
 			it("should have 4 suites with just 2 steps defined in each", func() {
-				expect(suites).To.Have.LengthOf(4)
-				expect(suites[0]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("testing describe/first it")
-				expect(suites[1]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[1])).To.Be.EqualTo("testing describe/second it")
-				expect(suites[2]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[2])).To.Be.EqualTo("testing another describe/third it")
-				expect(suites[3]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[3])).To.Be.EqualTo("testing another describe/forth it")
+				assert.Equal(t, 4, len(suites))
+				assert.Equal(t, 2, len(suites[0]))
+				assert.Equal(t, "testing describe/first it", buildSuiteTitle(suites[0]))
+				assert.Equal(t, 2, len(suites[1]))
+				assert.Equal(t, "testing describe/second it", buildSuiteTitle(suites[1]))
+				assert.Equal(t, 2, len(suites[2]))
+				assert.Equal(t, "testing another describe/third it", buildSuiteTitle(suites[2]))
+				assert.Equal(t, 2, len(suites[3]))
+				assert.Equal(t, "testing another describe/forth it", buildSuiteTitle(suites[3]))
 			})
 		})
 		context("with a more complex example", func() {
@@ -333,18 +335,18 @@ func TestIt(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 6 steps defined", func() {
-				expect(s2.steps).To.Have.LengthOf(6)
+				assert.Equal(t, 6, len(s2.steps))
 			})
 			it("should have 4 suites with just 2 steps defined in each", func() {
-				expect(suites).To.Have.LengthOf(4)
-				expect(suites[0]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("testing describe/first it")
-				expect(suites[1]).To.Have.LengthOf(2)
-				expect(buildSuiteTitle(suites[1])).To.Be.EqualTo("testing describe/second it")
-				expect(suites[2]).To.Have.LengthOf(3)
-				expect(buildSuiteTitle(suites[2])).To.Be.EqualTo("testing describe/testing nested context/third it")
-				expect(suites[3]).To.Have.LengthOf(3)
-				expect(buildSuiteTitle(suites[3])).To.Be.EqualTo("testing describe/testing nested context/testing nested empty context")
+				assert.Equal(t, 4, len(suites))
+				assert.Equal(t, 2, len(suites[0]))
+				assert.Equal(t, "testing describe/first it", buildSuiteTitle(suites[0]))
+				assert.Equal(t, 2, len(suites[1]))
+				assert.Equal(t, "testing describe/second it", buildSuiteTitle(suites[1]))
+				assert.Equal(t, 3, len(suites[2]))
+				assert.Equal(t, "testing describe/testing nested context/third it", buildSuiteTitle(suites[2]))
+				assert.Equal(t, 3, len(suites[3]))
+				assert.Equal(t, "testing describe/testing nested context/testing nested empty context", buildSuiteTitle(suites[3]))
 			})
 		})
 		context("with an even more complex example", func() {
@@ -365,17 +367,17 @@ func TestIt(t *testing.T) {
 							cart = []string{"Gopher toy"}
 						})
 						it2("should have 1 item in the cart", func() {
-							expect(cart).To.Have.LengthOf(1)
+							assert.Equal(t, 1, len(cart))
 						})
 						it2("should have no coupon applied by default", func() {
-							expect(appliedCoupons).To.Have.LengthOf(0)
+							assert.Equal(t, 0, len(appliedCoupons))
 						})
 						context2("when we add one more item to the cart", func() {
 							beforeEach2(func() {
 								cart = append(cart, "Crab toy")
 							})
 							it2("should have 2 items in the cart", func() {
-								expect(cart).To.Have.LengthOf(2)
+								assert.Equal(t, 2, len(cart))
 							})
 							context2("when the coupon is eligible for this purchase", func() {
 								context2("and the coupon gets applied", func() {
@@ -397,7 +399,7 @@ func TestIt(t *testing.T) {
 					context2("when shopping cart is empty", func() {
 						var cart []string
 						it2("should have 0 items", func() {
-							expect(cart).To.Have.LengthOf(0)
+							assert.Equal(t, 0, len(cart))
 						})
 					})
 				})
@@ -409,7 +411,7 @@ func TestIt(t *testing.T) {
 							signedUp = true
 						})
 						it2("should be signed up", func() {
-							expect(signedUp).To.Be.True()
+							assert.Equal(t, true, signedUp)
 						})
 					})
 				})
@@ -417,24 +419,24 @@ func TestIt(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 5 steps defined", func() {
-				expect(s2.steps).To.Have.LengthOf(20)
+				assert.Equal(t, 20, len(s2.steps))
 			})
 			it("should have 4 suites with just 2 steps defined in each", func() {
-				expect(suites).To.Have.LengthOf(7)
-				expect(suites[0]).To.Have.LengthOf(4)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("Checkout/when shopping cart has 1 item/should have 1 item in the cart")
-				expect(suites[1]).To.Have.LengthOf(4)
-				expect(buildSuiteTitle(suites[1])).To.Be.EqualTo("Checkout/when shopping cart has 1 item/should have no coupon applied by default")
-				expect(suites[2]).To.Have.LengthOf(6)
-				expect(buildSuiteTitle(suites[2])).To.Be.EqualTo("Checkout/when shopping cart has 1 item/when we add one more item to the cart/should have 2 items in the cart")
-				expect(suites[3]).To.Have.LengthOf(8)
-				expect(buildSuiteTitle(suites[3])).To.Be.EqualTo("Checkout/when shopping cart has 1 item/when we add one more item to the cart/when the coupon is eligible for this purchase/and the coupon gets applied/but the coupon value is higher than the purcahse value")
-				expect(suites[4]).To.Have.LengthOf(10)
-				expect(buildSuiteTitle(suites[4])).To.Be.EqualTo("Checkout/when shopping cart has 1 item/when we add one more item to the cart/when the coupon is eligible for this purchase/and the coupon gets applied/and the coupon value is less than the purchase value/when completing the purchase")
-				expect(suites[5]).To.Have.LengthOf(3)
-				expect(buildSuiteTitle(suites[5])).To.Be.EqualTo("Checkout/when shopping cart is empty/should have 0 items")
-				expect(suites[6]).To.Have.LengthOf(4)
-				expect(buildSuiteTitle(suites[6])).To.Be.EqualTo("Sign Up/when the user signs up/should be signed up")
+				assert.Equal(t, 7, len(suites))
+				assert.Equal(t, 4, len(suites[0]))
+				assert.Equal(t, "Checkout/when shopping cart has 1 item/should have 1 item in the cart", buildSuiteTitle(suites[0]))
+				assert.Equal(t, 4, len(suites[1]))
+				assert.Equal(t, "Checkout/when shopping cart has 1 item/should have no coupon applied by default", buildSuiteTitle(suites[1]))
+				assert.Equal(t, 6, len(suites[2]))
+				assert.Equal(t, "Checkout/when shopping cart has 1 item/when we add one more item to the cart/should have 2 items in the cart", buildSuiteTitle(suites[2]))
+				assert.Equal(t, 8, len(suites[3]))
+				assert.Equal(t, "Checkout/when shopping cart has 1 item/when we add one more item to the cart/when the coupon is eligible for this purchase/and the coupon gets applied/but the coupon value is higher than the purcahse value", buildSuiteTitle(suites[3]))
+				assert.Equal(t, 10, len(suites[4]))
+				assert.Equal(t, "Checkout/when shopping cart has 1 item/when we add one more item to the cart/when the coupon is eligible for this purchase/and the coupon gets applied/and the coupon value is less than the purchase value/when completing the purchase", buildSuiteTitle(suites[4]))
+				assert.Equal(t, 3, len(suites[5]))
+				assert.Equal(t, "Checkout/when shopping cart is empty/should have 0 items", buildSuiteTitle(suites[5]))
+				assert.Equal(t, 4, len(suites[6]))
+				assert.Equal(t, "Sign Up/when the user signs up/should be signed up", buildSuiteTitle(suites[6]))
 			})
 		})
 
@@ -465,14 +467,14 @@ func TestIt(t *testing.T) {
 				suites = s2.buildSuites()
 			})
 			it("should have 5 steps defined", func() {
-				expect(s2.steps).To.Have.LengthOf(7)
+				assert.Equal(t, 7, len(s2.steps))
 			})
 			it("should have 4 suites with just 2 steps defined in each", func() {
-				expect(suites).To.Have.LengthOf(2)
-				expect(suites[0]).To.Have.LengthOf(4)
-				expect(buildSuiteTitle(suites[0])).To.Be.EqualTo("1/1.1/1.1.1")
-				expect(suites[1]).To.Have.LengthOf(4)
-				expect(buildSuiteTitle(suites[1])).To.Be.EqualTo("1/1.2/1.2.1")
+				assert.Equal(t, 2, len(suites))
+				assert.Equal(t, 4, len(suites[0]))
+				assert.Equal(t, "1/1.1/1.1.1", buildSuiteTitle(suites[0]))
+				assert.Equal(t, 4, len(suites[1]))
+				assert.Equal(t, "1/1.2/1.2.1", buildSuiteTitle(suites[1]))
 			})
 		})
 	})
@@ -480,7 +482,7 @@ func TestIt(t *testing.T) {
 
 func TestUsingTestTable(t *testing.T) {
 	s := NewTestSuite(t)
-	describe, it, expect, start := s.Describe, s.It, s.Expect, s.Start
+	describe, it, start := s.Describe, s.It, s.Start
 	defer start()
 
 	describe("using a test table", func() {
@@ -497,7 +499,7 @@ func TestUsingTestTable(t *testing.T) {
 		for _, tc := range testCases {
 			tc := tc
 			it(fmt.Sprintf("should be %v when %v == %v", tc.expected, tc.left, tc.right), func() {
-				expect(tc.left == tc.right).To.Be.EqualTo(tc.expected)
+				assert.Equal(t, tc.expected, tc.left == tc.right)
 			})
 		}
 	})
