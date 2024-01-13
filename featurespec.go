@@ -388,7 +388,7 @@ func (fs *FeatureSuite) World() *World {
 func buildSuiteTitleForFeature(suite []*featureStep) string {
 	var sb strings.Builder
 	for i, s := range suite {
-		if s.kind == isFeature || s.kind == isBackground || s.kind == isScenario {
+		if s.kind == isFeature || s.kind == isScenario {
 			if i != 0 {
 				sb.WriteString("/")
 			}

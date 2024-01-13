@@ -7,8 +7,9 @@ import (
 )
 
 type mock struct {
-	t     *testing.T
-	calls [][]any
+	t          *testing.T
+	calls      [][]any
+	testTitles []string
 	//
 }
 
@@ -24,6 +25,7 @@ func (m *mock) Errorf(format string, args ...interface{}) {
 }
 
 func (m *mock) Run(name string, f func(t *testing.T)) bool {
+	m.testTitles = append(m.testTitles, name)
 	f(m.t)
 	return false
 }
@@ -81,6 +83,10 @@ func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 	})
 
 	assert.Equal(t, [][]any(nil), testingMock.calls)
+	assert.Equal(t, []string{
+		"Checkout/scenario 1",
+		"Checkout/scenario 2",
+	}, testingMock.testTitles)
 }
 
 func TestScenariosCanNotBeNested(t *testing.T) {
@@ -98,6 +104,7 @@ func TestScenariosCanNotBeNested(t *testing.T) {
 	})
 
 	assert.Equal(t, [][]any{{"invalid position for `Scenario` function, it must be inside a `Feature` call"}}, testingMock.calls)
+	assert.Equal(t, []string{"Checkout/scenario 1"}, testingMock.testTitles)
 }
 
 func TestScenarioCanContainGivenWhenThen(t *testing.T) {
@@ -128,6 +135,10 @@ func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 	assert.Equal(t, "given 1", spec.suites[0][2].title)
 	assert.Equal(t, "when 1", spec.suites[0][3].title)
 	assert.Equal(t, "then 1", spec.suites[0][4].title)
+
+	assert.Equal(t, []string{
+		"Checkout/scenario 1",
+	}, testingMock.testTitles)
 }
 
 func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
@@ -170,6 +181,10 @@ func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 	assert.Equal(t, "given 2", spec.suites[1][2].title)
 	assert.Equal(t, "when 2", spec.suites[1][3].title)
 	assert.Equal(t, "then 2", spec.suites[1][4].title)
+	assert.Equal(t, []string{
+		"Checkout/scenario 1",
+		"Checkout/scenario 2",
+	}, testingMock.testTitles)
 }
 
 func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
@@ -211,6 +226,7 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 	assert.Equal(t, "given 1", spec.suites[0][6].title)
 	assert.Equal(t, "when 1", spec.suites[0][7].title)
 	assert.Equal(t, "then 1", spec.suites[0][8].title)
+	assert.Equal(t, []string{"Checkout/scenario 1"}, testingMock.testTitles)
 }
 
 func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
@@ -272,6 +288,11 @@ func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 	assert.Equal(t, "given 2", secondSuite[6].title)
 	assert.Equal(t, "when 2", secondSuite[7].title)
 	assert.Equal(t, "then 2", secondSuite[8].title)
+
+	assert.Equal(t, []string{
+		"Checkout/scenario 1",
+		"Checkout/scenario 2",
+	}, testingMock.testTitles)
 }
 
 func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
@@ -315,7 +336,7 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 			})
 		})
 
-		scenario("scenario 1", func() {
+		scenario("scenario 2", func() {
 			given("given 2", func() {
 				nums = append(nums, 7)
 			})
@@ -329,7 +350,7 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 		})
 	})
 
-	feature("Checkout 11", func() {
+	feature("Checkout 2", func() {
 		var nums []int
 
 		background("background 11", func() {
@@ -358,7 +379,7 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 			})
 		})
 
-		scenario("scenario 11", func() {
+		scenario("scenario 12", func() {
 			given("given 12", func() {
 				nums = append(nums, 17)
 			})
@@ -378,6 +399,13 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 	assert.Equal(t, []any{[]int{1, 2, 3, 7, 8, 9}}, mockAssert.calls[1])
 	assert.Equal(t, []any{[]int{11, 12, 13, 14, 15, 16}}, mockAssert.calls[2])
 	assert.Equal(t, []any{[]int{11, 12, 13, 17, 18, 19}}, mockAssert.calls[3])
+
+	assert.Equal(t, []string{
+		"Checkout 1/scenario 1",
+		"Checkout 1/scenario 2",
+		"Checkout 2/scenario 11",
+		"Checkout 2/scenario 12",
+	}, testingMock.testTitles)
 }
 
 //func TestFeature(t *testing.T) {
