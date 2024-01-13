@@ -24,30 +24,30 @@ func Equal(t *testing.T, expected, actual any, msg ...string) {
 	}
 }
 
-func NotNil(t *testing.T, value any) {
-	t.Helper()
-	if isNil(value) {
-		t.Errorf("expected %v to be nil but it is not", value)
-	}
-}
+//func NotNil(t *testing.T, value any) {
+//	t.Helper()
+//	if isNil(value) {
+//		t.Errorf("expected %v to be nil but it is not", value)
+//	}
+//}
+//
+//func Nil(t *testing.T, value any) {
+//	t.Helper()
+//	if !isNil(value) {
+//		t.Errorf("expected %v to be not nil but it is", value)
+//	}
+//}
 
-func Nil(t *testing.T, value any) {
-	t.Helper()
-	if !isNil(value) {
-		t.Errorf("expected %v to be not nil but it is", value)
-	}
-}
-
-func isNil(value any) bool {
-	if value == nil {
-		return true
-	}
-	valueOf := reflect.ValueOf(value)
-	switch valueOf.Kind() {
-	case reflect.Chan, reflect.UnsafePointer, reflect.Ptr, reflect.Slice, reflect.Map, reflect.Func, reflect.Interface:
-		if valueOf.IsNil() {
-			return true
-		}
-	}
-	return false
-}
+//func isNil(value any) bool {
+//	if value == nil {
+//		return true
+//	}
+//	valueOf := reflect.ValueOf(value)
+//	switch valueOf.Kind() {
+//	case reflect.Chan, reflect.UnsafePointer, reflect.Ptr, reflect.Slice, reflect.Map, reflect.Func, reflect.Interface:
+//		if valueOf.IsNil() {
+//			return true
+//		}
+//	}
+//	return false
+//}
