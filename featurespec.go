@@ -1,6 +1,9 @@
 package gospec
 
 import (
+	"fmt"
+	"io"
+	"os"
 	"strings"
 	"testing"
 )
@@ -40,14 +43,28 @@ type FeatureSuite struct {
 	indent          int
 	inBackground    bool
 	atSuiteIndex    int
+	out             io.Writer
+	report          strings.Builder
 }
 
-func NewFeatureSuite(t testingInterface) *FeatureSuite {
+type Option func(*FeatureSuite)
+
+func WithOutput(w io.Writer) Option {
+	return func(fs *FeatureSuite) {
+		fs.out = w
+	}
+}
+
+func NewFeatureSuite(t testingInterface, options ...Option) *FeatureSuite {
 	fs := &FeatureSuite{
 		t:     t,
 		world: &World{},
+		out:   os.Stdout,
 	}
 	fs.world.suite = fs
+	for _, o := range options {
+		o(fs)
+	}
 	return fs
 }
 
@@ -74,11 +91,14 @@ func (fs *FeatureSuite) prevKind() featureStepKind {
 }
 
 func (fs *FeatureSuite) Feature(title string, cb func()) {
+	fs.report = strings.Builder{}
 	fs.t.Helper()
 	if fs.prevKind() != isUndefined {
 		fs.t.Errorf("invalid position for `Feature` function, it must be at top level")
 		return
 	}
+
+	fs.report.WriteString(fmt.Sprintf("Feature: %s\n", title))
 
 	s := &featureStep{
 		kind:  isFeature,
@@ -87,7 +107,7 @@ func (fs *FeatureSuite) Feature(title string, cb func()) {
 	fs.pushStack(s)
 
 	cb()
-
+	// check if last there is a new suite added, if not, copy the stack here...
 	fs.popBackgroundFromStackIfExists()
 	fs.popStack(s)
 	fs.backgroundStack = []*featureStep{}
@@ -98,6 +118,9 @@ func (fs *FeatureSuite) Feature(title string, cb func()) {
 	}
 
 	fs.start()
+
+	fs.report.WriteString("\n")
+	_, _ = fs.out.Write([]byte(fs.report.String()))
 }
 
 func (fs *FeatureSuite) pushStack(s *featureStep) {
@@ -180,6 +203,8 @@ func (fs *FeatureSuite) Background(title string, cb func()) {
 		return
 	}
 
+	fs.report.WriteString(fmt.Sprintf("\n\tBackground: %s\n", title))
+
 	s := &featureStep{
 		kind:  isBackground,
 		title: title,
@@ -199,6 +224,9 @@ func (fs *FeatureSuite) Scenario(title string, cb func()) {
 		fs.t.Errorf("invalid position for `Scenario` function, it must be inside a `Feature` call")
 		return
 	}
+
+	fs.report.WriteString(fmt.Sprintf("\n\tScenario: %s\n", title))
+
 	s := &featureStep{
 		kind:  isScenario,
 		title: title,
@@ -218,6 +246,8 @@ func (fs *FeatureSuite) Scenario(title string, cb func()) {
 func (fs *FeatureSuite) Given(title string, cb func()) {
 	fs.t.Helper()
 
+	fs.report.WriteString(fmt.Sprintf("\t\tGiven: %s\n", title))
+
 	s := &featureStep{
 		kind:  isGiven,
 		title: title,
@@ -232,6 +262,8 @@ func (fs *FeatureSuite) Given(title string, cb func()) {
 
 func (fs *FeatureSuite) When(title string, cb func()) {
 	fs.t.Helper()
+
+	fs.report.WriteString(fmt.Sprintf("\t\tWhen: %s\n", title))
 
 	s := &featureStep{
 		kind:  isWhen,
@@ -248,6 +280,8 @@ func (fs *FeatureSuite) When(title string, cb func()) {
 
 func (fs *FeatureSuite) Then(title string, cb func()) {
 	fs.t.Helper()
+
+	fs.report.WriteString(fmt.Sprintf("\t\tThen: %s\n", title))
 
 	s := &featureStep{
 		kind:  isThen,

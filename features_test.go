@@ -1,6 +1,8 @@
 package gospec
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
@@ -41,8 +43,9 @@ func (m *assertMock) Assert(args ...any) {
 
 func TestFeaturesCanBeSetAtTopLevel(t *testing.T) {
 	var (
+		out     bytes.Buffer
 		tm      = &mock{}
-		fs      = NewFeatureSuite(tm)
+		fs      = NewFeatureSuite(tm, WithOutput(&out))
 		feature = fs.Feature
 	)
 
@@ -50,12 +53,21 @@ func TestFeaturesCanBeSetAtTopLevel(t *testing.T) {
 	feature("feature 2", func() {})
 
 	assert.Equal(t, [][]any(nil), tm.calls)
+
+	assert.Equal(t, strings.Join([]string{
+		`Feature: feature 1`,
+		``,
+		`Feature: feature 2`,
+		``,
+		``,
+	}, "\n"), out.String())
 }
 
 func TestFeaturesCanNotBeNested(t *testing.T) {
 	var (
+		out         bytes.Buffer
 		testingMock = &mock{}
-		fs          = NewFeatureSuite(testingMock)
+		fs          = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = fs.Feature
 	)
 
@@ -65,12 +77,14 @@ func TestFeaturesCanNotBeNested(t *testing.T) {
 	})
 
 	assert.Equal(t, [][]any{{"invalid position for `Feature` function, it must be at top level"}}, testingMock.calls)
+	assert.Equal(t, "\n", out.String())
 }
 
 func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 	var (
+		out         bytes.Buffer
 		testingMock = &mock{}
-		fs          = NewFeatureSuite(testingMock)
+		fs          = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = fs.Feature
 		background  = fs.Background
 		scenario    = fs.Scenario
@@ -87,12 +101,25 @@ func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 		"Checkout/scenario 1",
 		"Checkout/scenario 2",
 	}, testingMock.testTitles)
+
+	assert.Equal(t, strings.Join([]string{
+		`Feature: Checkout`,
+		``,
+		`	Background: background`,
+		``,
+		`	Scenario: scenario 1`,
+		``,
+		`	Scenario: scenario 2`,
+		``,
+		``,
+	}, "\n"), out.String())
 }
 
 func TestScenariosCanNotBeNested(t *testing.T) {
 	var (
+		out         bytes.Buffer
 		testingMock = &mock{}
-		spec        = NewFeatureSuite(testingMock)
+		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 	)
@@ -105,12 +132,21 @@ func TestScenariosCanNotBeNested(t *testing.T) {
 
 	assert.Equal(t, [][]any{{"invalid position for `Scenario` function, it must be inside a `Feature` call"}}, testingMock.calls)
 	assert.Equal(t, []string{"Checkout/scenario 1"}, testingMock.testTitles)
+
+	assert.Equal(t, strings.Join([]string{
+		`Feature: Checkout`,
+		``,
+		`	Scenario: scenario 1`,
+		``,
+		``,
+	}, "\n"), out.String())
 }
 
 func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 	var (
+		out         bytes.Buffer
 		testingMock = &mock{}
-		spec        = NewFeatureSuite(testingMock)
+		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 		given       = spec.Given
@@ -139,12 +175,24 @@ func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 	assert.Equal(t, []string{
 		"Checkout/scenario 1",
 	}, testingMock.testTitles)
+
+	assert.Equal(t, strings.Join([]string{
+		`Feature: Checkout`,
+		``,
+		`	Scenario: scenario 1`,
+		`		Given: given 1`,
+		`		When: when 1`,
+		`		Then: then 1`,
+		``,
+		``,
+	}, "\n"), out.String())
 }
 
 func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 	var (
+		out         bytes.Buffer
 		testingMock = &mock{}
-		spec        = NewFeatureSuite(testingMock)
+		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 		given       = spec.Given
@@ -185,12 +233,28 @@ func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 		"Checkout/scenario 1",
 		"Checkout/scenario 2",
 	}, testingMock.testTitles)
+	assert.Equal(t, strings.Join([]string{
+		`Feature: Checkout`,
+		``,
+		`	Scenario: scenario 1`,
+		`		Given: given 1`,
+		`		When: when 1`,
+		`		Then: then 1`,
+		``,
+		`	Scenario: scenario 2`,
+		`		Given: given 2`,
+		`		When: when 2`,
+		`		Then: then 2`,
+		``,
+		``,
+	}, "\n"), out.String())
 }
 
 func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 	var (
+		out         bytes.Buffer
 		testingMock = &mock{}
-		spec        = NewFeatureSuite(testingMock)
+		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 		background  = spec.Background
@@ -227,12 +291,28 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 	assert.Equal(t, "when 1", spec.suites[0][7].title)
 	assert.Equal(t, "then 1", spec.suites[0][8].title)
 	assert.Equal(t, []string{"Checkout/scenario 1"}, testingMock.testTitles)
+	assert.Equal(t, strings.Join([]string{
+		`Feature: Checkout`,
+		``,
+		`	Background: background 1`,
+		`		Given: given 0`,
+		`		When: when 0`,
+		`		Then: then 0`,
+		``,
+		`	Scenario: scenario 1`,
+		`		Given: given 1`,
+		`		When: when 1`,
+		`		Then: then 1`,
+		``,
+		``,
+	}, "\n"), out.String())
 }
 
 func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 	var (
+		out         bytes.Buffer
 		testingMock = &mock{}
-		spec        = NewFeatureSuite(testingMock)
+		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 		background  = spec.Background
@@ -293,13 +373,35 @@ func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 		"Checkout/scenario 1",
 		"Checkout/scenario 2",
 	}, testingMock.testTitles)
+
+	assert.Equal(t, strings.Join([]string{
+		`Feature: Checkout`,
+		``,
+		`	Background: background 1`,
+		`		Given: given 0`,
+		`		When: when 0`,
+		`		Then: then 0`,
+		``,
+		`	Scenario: scenario 1`,
+		`		Given: given 1`,
+		`		When: when 1`,
+		`		Then: then 1`,
+		``,
+		`	Scenario: scenario 2`,
+		`		Given: given 2`,
+		`		When: when 2`,
+		`		Then: then 2`,
+		``,
+		``,
+	}, "\n"), out.String())
 }
 
 func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 	var (
+		out         bytes.Buffer
 		testingMock = &mock{t: t}
 		mockAssert  = &assertMock{}
-		spec        = NewFeatureSuite(testingMock)
+		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature, background, scenario,
 		given, when, then, world, table = spec.API()
 	)
@@ -315,10 +417,10 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 				nums = []int{}
 				nums = append(nums, 1)
 			})
-			given("when 1", func() {
+			when("when 1", func() {
 				nums = append(nums, 2)
 			})
-			given("then 1", func() {
+			then("then 1", func() {
 				nums = append(nums, 3)
 			})
 		})
@@ -358,10 +460,10 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 				nums = []int{}
 				nums = append(nums, 11)
 			})
-			given("when 11", func() {
+			when("when 11", func() {
 				nums = append(nums, 12)
 			})
-			given("then 11", func() {
+			then("then 11", func() {
 				nums = append(nums, 13)
 			})
 		})
@@ -406,6 +508,44 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 		"Checkout 2/scenario 11",
 		"Checkout 2/scenario 12",
 	}, testingMock.testTitles)
+
+	assert.Equal(t, strings.Join([]string{
+		`Feature: Checkout 1`,
+		``,
+		`	Background: background 1`,
+		`		Given: given 1`,
+		`		When: when 1`,
+		`		Then: then 1`,
+		``,
+		`	Scenario: scenario 1`,
+		`		Given: given 2`,
+		`		When: when 2`,
+		`		Then: then 2`,
+		``,
+		`	Scenario: scenario 2`,
+		`		Given: given 2`,
+		`		When: when 2`,
+		`		Then: then 2`,
+		``,
+		`Feature: Checkout 2`,
+		``,
+		`	Background: background 11`,
+		`		Given: given 11`,
+		`		When: when 11`,
+		`		Then: then 11`,
+		``,
+		`	Scenario: scenario 11`,
+		`		Given: given 12`,
+		`		When: when 12`,
+		`		Then: then 12`,
+		``,
+		`	Scenario: scenario 12`,
+		`		Given: given 12`,
+		`		When: when 12`,
+		`		Then: then 12`,
+		``,
+		``,
+	}, "\n"), out.String())
 }
 
 //func TestFeature(t *testing.T) {
