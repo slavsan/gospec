@@ -14,7 +14,7 @@ func TestParallel(t *testing.T) {
 		gospec.NewFeatureSuite(t, gospec.WithParallel()).API()
 
 	feature("Cart", func() {
-		background("", func() {
+		background(func() {
 			given("there is a cart with three items", func(w *gospec.World) {
 				w.Set("cart", []string{
 					"Gopher Toy",

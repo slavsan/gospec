@@ -14,7 +14,7 @@ func TestSimple(t *testing.T) {
 	feature("Cart", func() {
 		var cart []string
 
-		background("", func() {
+		background(func() {
 			given("there is a cart with three items", func() {
 				cart = []string{
 					"Gopher Toy",

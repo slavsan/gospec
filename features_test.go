@@ -97,7 +97,7 @@ func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 	)
 
 	feature("Checkout", func() {
-		background("background", func() {})
+		background(func() {})
 		scenario("scenario 1", func() {})
 		scenario("scenario 2", func() {})
 	})
@@ -111,7 +111,7 @@ func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 	assert.Equal(t, strings.Join([]string{
 		`Feature: Checkout`,
 		``,
-		`	Background: background`,
+		`	Background:`,
 		``,
 		`	Scenario: scenario 1`,
 		``,
@@ -270,7 +270,7 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 	)
 
 	feature("Checkout", func() {
-		background("background 1", func() {
+		background(func() {
 			given("given 0", func() {})
 			when("when 0", func() {})
 			then("then 0", func() {})
@@ -288,7 +288,7 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 	assert.Equal(t, 1, len(spec.suites))
 	assert.Equal(t, 9, len(spec.suites[0]))
 	assert.Equal(t, "Checkout", spec.suites[0][0].title)
-	assert.Equal(t, "background 1", spec.suites[0][1].title)
+	assert.Equal(t, "", spec.suites[0][1].title)
 	assert.Equal(t, "given 0", spec.suites[0][2].title)
 	assert.Equal(t, "when 0", spec.suites[0][3].title)
 	assert.Equal(t, "then 0", spec.suites[0][4].title)
@@ -300,7 +300,7 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 	assert.Equal(t, strings.Join([]string{
 		`Feature: Checkout`,
 		``,
-		`	Background: background 1`,
+		`	Background:`,
 		`		Given: given 0`,
 		`		When: when 0`,
 		`		Then: then 0`,
@@ -328,7 +328,7 @@ func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 	)
 
 	feature("Checkout", func() {
-		background("background 1", func() {
+		background(func() {
 			given("given 0", func() {})
 			when("when 0", func() {})
 			then("then 0", func() {})
@@ -354,7 +354,7 @@ func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 	firstSuite := spec.suites[0]
 	assert.Equal(t, 9, len(firstSuite))
 	assert.Equal(t, "Checkout", firstSuite[0].title)
-	assert.Equal(t, "background 1", firstSuite[1].title)
+	assert.Equal(t, "", firstSuite[1].title)
 	assert.Equal(t, "given 0", firstSuite[2].title)
 	assert.Equal(t, "when 0", firstSuite[3].title)
 	assert.Equal(t, "then 0", firstSuite[4].title)
@@ -366,7 +366,7 @@ func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 	secondSuite := spec.suites[1]
 	assert.Equal(t, 9, len(secondSuite))
 	assert.Equal(t, "Checkout", secondSuite[0].title)
-	assert.Equal(t, "background 1", secondSuite[1].title)
+	assert.Equal(t, "", secondSuite[1].title)
 	assert.Equal(t, "given 0", secondSuite[2].title)
 	assert.Equal(t, "when 0", secondSuite[3].title)
 	assert.Equal(t, "then 0", secondSuite[4].title)
@@ -383,7 +383,7 @@ func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 	assert.Equal(t, strings.Join([]string{
 		`Feature: Checkout`,
 		``,
-		`	Background: background 1`,
+		`	Background:`,
 		`		Given: given 0`,
 		`		When: when 0`,
 		`		Then: then 0`,
@@ -417,7 +417,7 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 	feature("Checkout 1", func() {
 		var nums []int
 
-		background("background 1", func() {
+		background(func() {
 			given("given 1", func() {
 				nums = []int{}
 				nums = append(nums, 1)
@@ -460,7 +460,7 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 	feature("Checkout 2", func() {
 		var nums []int
 
-		background("background 11", func() {
+		background(func() {
 			given("given 11", func() {
 				nums = []int{}
 				nums = append(nums, 11)
@@ -517,7 +517,7 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 	assert.Equal(t, strings.Join([]string{
 		`Feature: Checkout 1`,
 		``,
-		`	Background: background 1`,
+		`	Background:`,
 		`		Given: given 1`,
 		`		When: when 1`,
 		`		Then: then 1`,
@@ -534,7 +534,7 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 		``,
 		`Feature: Checkout 2`,
 		``,
-		`	Background: background 11`,
+		`	Background:`,
 		`		Given: given 11`,
 		`		When: when 11`,
 		`		Then: then 11`,
@@ -575,7 +575,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 
 	t.Run("run parallel tests", func(t *testing.T) {
 		feature("Checkout 1", func() {
-			background("background 1", func() {
+			background(func() {
 				given("given 1", func(w *World) {
 					w.Set("nums", []int{1})
 				})
@@ -633,7 +633,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 		})
 
 		feature("Checkout 2", func() {
-			background("background 11", func() {
+			background(func() {
 				given("given 11", func(w *World) {
 					w.Set("nums", []int{11})
 				})
@@ -736,7 +736,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 		assert.Equal(t, strings.Join([]string{
 			`Feature: Checkout 1`,
 			``,
-			`	Background: background 1`,
+			`	Background:`,
 			`		Given: given 1`,
 			`		When: when 1`,
 			`		Then: then 1`,
@@ -753,7 +753,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 			``,
 			`Feature: Checkout 2`,
 			``,
-			`	Background: background 11`,
+			`	Background:`,
 			`		Given: given 11`,
 			`		When: when 11`,
 			`		Then: then 11`,

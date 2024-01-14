@@ -111,7 +111,7 @@ func NewFeatureSuite(t testingInterface, options ...Option) *FeatureSuite {
 
 func (fs *FeatureSuite) API() (
 	func(string, any),
-	func(string, any),
+	func(any),
 	func(string, any),
 	func(string, any),
 	func(string, any),
@@ -238,18 +238,17 @@ func (fs *FeatureSuite) findIndexOfStep(s *featureStep) int {
 	return -1
 }
 
-func (fs *FeatureSuite) Background(title string, cb any) {
+func (fs *FeatureSuite) Background(cb any) {
 	fs.t.Helper()
 	if fs.prevKind() != isFeature {
 		fs.t.Errorf("invalid position for `Background` function, it must be inside a `Feature` call")
 		return
 	}
 
-	fs.report.WriteString(fmt.Sprintf("\n\tBackground: %s\n", title))
+	fs.report.WriteString("\n\tBackground:\n")
 
 	s := &featureStep{
-		kind:  isBackground,
-		title: title,
+		kind: isBackground,
 	}
 
 	fs.inBackground = true
