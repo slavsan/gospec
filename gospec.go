@@ -2,21 +2,20 @@ package gospec
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"testing"
 )
 
-type testingInterface interface {
-	Helper()
-	Parallel()
-	Errorf(format string, args ...interface{})
-	Run(name string, f func(t *testing.T)) bool
-}
-
 type Suite struct {
-	t      testingInterface
-	steps  []*step
-	indent int
+	t            testingInterface
+	stack        []*step
+	suites       [][]*step
+	indent       int
+	atSuiteIndex int
+	out          io.Writer
+	report       strings.Builder
 }
 
 type block int
@@ -34,153 +33,27 @@ type step struct {
 	cb     func()
 }
 
-func NewTestSuite(t *testing.T) *Suite {
-	return &Suite{
+func NewTestSuite(t testingInterface, options ...SuiteOption) *Suite {
+	suite := &Suite{
 		t:      t,
-		steps:  []*step{},
+		out:    os.Stdout,
 		indent: 0,
 	}
+	for _, o := range options {
+		o(suite)
+	}
+	return suite
 }
 
-func (suite *Suite) report() {
-	for _, s := range suite.steps {
-		if s.block == isBeforeEach {
-			continue
-		}
-		if s.block == isIt {
-			fmt.Printf("%s✓ %s\n", strings.Repeat("  ", s.indent+1), s.title)
-			continue
-		}
-		fmt.Printf("%s%s\n", strings.Repeat("  ", s.indent), s.title)
-	}
-	fmt.Printf("\n")
-}
-
-func (suite *Suite) buildSuites() [][]*step {
-	var suites [][]*step
-	stack := []*step{}
-	indent := 0
-
-	copyStack := func() {
-		suite := []*step{}
-		if len(suites) > 0 {
-			lastSuite := suites[len(suites)-1]
-			if stack[len(stack)-1] == lastSuite[len(lastSuite)-1] {
-				return
-			}
-		}
-		for _, step := range stack {
-			suite = append(suite, step)
-		}
-		suites = append(suites, suite)
-	}
-
-	lastSuiteEndsWithIt := func() bool {
-		suite := suites[len(suites)-1]
-		return suite[len(suite)-1].block == isIt
-	}
-
-	lastSuiteStartsWithStep := func(s *step) bool {
-		if len(suites) == 0 {
-			return false
-		}
-		suite := suites[len(suites)-1]
-		return suite[0] == s
-	}
-
-	findLastSiblingIndex := func(s *step) int {
-		lastDescribeIndex := len(stack)
-		for i := len(stack) - 1; i >= 0; i-- {
-			step := stack[i]
-			lastDescribeIndex--
-			if step.indent == s.indent && step.block == isDescribe {
-				break
-			}
-		}
-		return lastDescribeIndex
-	}
-
-	isNextStepSibling := func(s *step, i int) bool {
-		if i+1 < len(suite.steps) { // if there is a next step
-			next := suite.steps[i+1] // peek
-			if next.indent == s.indent && next.block == isDescribe {
-				return true
-			}
-		}
-		return false
-	}
-
-	for i := 0; i < len(suite.steps); i++ {
-		s := suite.steps[i]
-		if s.block == isDescribe && s.indent < indent {
-			if !lastSuiteEndsWithIt() {
-				copyStack()
-			}
-			lastDescribeIndex := findLastSiblingIndex(s)
-			if lastDescribeIndex != 0 {
-				stack = stack[:lastDescribeIndex]
-				indent = stack[len(stack)-1].indent
-			}
-			stack = append(stack, s)
-			continue
-		}
-		if s.block == isDescribe && s.indent == indent {
-			if !lastSuiteEndsWithIt() {
-				copyStack()
-			}
-			stack = stack[:findLastSiblingIndex(s)]
-			stack = append(stack, s)
-			continue
-		}
-		if s.block == isDescribe && s.indent > indent {
-			stack = append(stack, s)
-			indent++
-			if isNextStepSibling(s, i) {
-				copyStack()
-			}
-			continue
-		}
-		if s.block == isBeforeEach {
-			stack = append(stack, s)
-			continue
-		}
-		if s.block == isIt {
-			stack = append(stack, s)
-			copyStack()
-			stack = stack[:len(stack)-1]
-			if i+1 < len(suite.steps) {
-				next := suite.steps[i+1] // peek
-				if len(stack) > 0 && next.indent < stack[len(stack)-1].indent {
-					stack = stack[:findLastSiblingIndex(s)]
+func (suite *Suite) start() {
+	for i := suite.atSuiteIndex; i < len(suite.suites); i++ {
+		suite2 := suite.suites[i]
+		suite.atSuiteIndex++
+		suite.t.Run(buildSuiteTitle(suite2), func(t *testing.T) {
+			for _, s := range suite2 {
+				if s.cb != nil {
+					s.cb()
 				}
-			} else {
-				stack = stack[:findLastSiblingIndex(s)]
-			}
-			continue
-		}
-	}
-
-	if len(stack) > 0 {
-		if len(stack) == 1 && lastSuiteStartsWithStep(stack[0]) {
-		} else {
-			copyStack()
-		}
-	}
-
-	return suites
-}
-
-func (suite *Suite) Start() {
-	suite.report()
-
-	suites := suite.buildSuites()
-
-	// debugSuitesAndSteps(suites)
-
-	for _, childSuite := range suites {
-		suite.t.Run(buildSuiteTitle(childSuite), func(t *testing.T) {
-			for _, step := range childSuite {
-				step.cb()
 			}
 		})
 	}
@@ -199,42 +72,148 @@ func buildSuiteTitle(suite []*step) string {
 	return sb.String()
 }
 
-// func debugSuitesAndSteps(suites [][]*step) {
-// 	for i, suite := range suites {
-// 		fmt.Printf("SUITE: %d\n", i)
-// 		for _, step := range suite {
-// 			fmt.Printf("STEP: %#v\n", step)
-// 		}
-// 		fmt.Println()
-// 	}
-// }
+func (suite *Suite) pushStack(s *step) {
+	suite.t.Helper()
+	suite.stack = append(suite.stack, s)
+}
 
-func (suite *Suite) Describe(title string, cb func()) {
+func (suite *Suite) popStack(s *step) {
+	suite.t.Helper()
+	if len(suite.stack) == 0 {
+		suite.t.Errorf("unexpected empty stack")
+		return
+	}
+
+	lastStep := suite.stack[len(suite.stack)-1]
+	if lastStep != s {
+		suite.t.Errorf("unexpected step")
+		return
+	}
+
+	suite.stack = suite.stack[:len(suite.stack)-1]
+}
+
+func (suite *Suite) popStackUntilStep(s *step) {
+	suite.t.Helper()
+	if len(suite.stack) == 0 {
+		suite.t.Errorf("unexpected empty stack")
+		return
+	}
+
+	index := suite.findIndexOfStep(s)
+	if index < 0 {
+		return
+	}
+
+	if index+1 > len(suite.stack) {
+		suite.t.Errorf("out of bound index")
+		return
+	}
+
+	suite.stack = suite.stack[:index+1]
+}
+
+func (suite *Suite) findIndexOfStep(s *step) int {
+	suite.t.Helper()
+	if len(suite.stack) == 0 {
+		return -1
+	}
+
+	for i := len(suite.stack) - 1; i >= 0; i-- {
+		if suite.stack[i] == s {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func (suite *Suite) Describe(title string, cb any) {
+	suite.t.Helper()
+
+	// TODO: add checks for order of blocks
+
+	if suite.indent == 0 {
+		// starting with a new top-level describe, so create a new router
+		suite.report = strings.Builder{}
+	}
+
+	suite.report.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat("\t", suite.indent), title))
+
 	suite.indent++
-	suite.steps = append(suite.steps, &step{
+
+	s := &step{
 		title:  title,
 		indent: suite.indent,
 		block:  isDescribe,
-		cb:     cb,
-	})
+	}
 
-	cb()
+	suite.pushStack(s)
+
+	cb.(func())()
+
 	suite.indent--
+	suite.popStackUntilStep(s)
+	suite.popStack(s)
+
+	// closing top-level describe, therefore write the output
+	if suite.indent == 0 {
+		suite.start()
+		suite.report.WriteString("\n")
+		_, _ = suite.out.Write([]byte(suite.report.String()))
+	}
 }
 
 func (suite *Suite) BeforeEach(cb func()) {
-	suite.steps = append(suite.steps, &step{
+	suite.t.Helper()
+
+	s := &step{
 		indent: suite.indent,
 		block:  isBeforeEach,
 		cb:     cb,
-	})
+	}
+
+	suite.pushStack(s)
 }
 
 func (suite *Suite) It(title string, cb func()) {
-	suite.steps = append(suite.steps, &step{
+	suite.t.Helper()
+
+	suite.report.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat("\t", suite.indent), title))
+
+	s := &step{
 		title:  title,
 		indent: suite.indent,
 		block:  isIt,
 		cb:     cb,
-	})
+	}
+
+	suite.pushStack(s)
+
+	if len(suite.stack) > 0 {
+		suite.copyStack()
+	}
+
+	suite.popStack(s)
+}
+
+func (suite *Suite) copyStack() {
+	suite.t.Helper()
+	if len(suite.stack) <= 0 {
+		return
+	}
+
+	var ssuite []*step
+	for _, s := range suite.stack {
+		ssuite = append(ssuite, s)
+	}
+	suite.suites = append(suite.suites, ssuite)
+}
+
+func (suite *Suite) setOutput(w io.Writer) {
+	suite.out = w
+}
+
+func (suite *Suite) setParallel() {
+	// TODO: implement parallel execution for Test suites
 }

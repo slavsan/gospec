@@ -24,15 +24,13 @@ const (
 )
 
 type featureStep struct {
-	indent int
-	kind   featureStepKind
-	title  string
-	cb     any
+	kind  featureStepKind
+	title string
+	cb    any
 }
 
 type World struct {
 	T      *testing.T
-	suite  *FeatureSuite
 	values map[string]any
 	mu     sync.Mutex
 }
@@ -73,32 +71,16 @@ func (w *World) Swap(name string, f func(any) any) {
 type FeatureSuite struct {
 	t               testingInterface
 	parallel        bool
-	world           *World
 	stack           []*featureStep
 	backgroundStack []*featureStep
 	suites          [][]*featureStep
-	indent          int
 	inBackground    bool
 	atSuiteIndex    int
 	out             io.Writer
 	report          strings.Builder
 }
 
-type Option func(*FeatureSuite)
-
-func WithOutput(w io.Writer) Option {
-	return func(fs *FeatureSuite) {
-		fs.out = w
-	}
-}
-
-func WithParallel() Option {
-	return func(fs *FeatureSuite) {
-		fs.parallel = true
-	}
-}
-
-func NewFeatureSuite(t testingInterface, options ...Option) *FeatureSuite {
+func NewFeatureSuite(t testingInterface, options ...SuiteOption) *FeatureSuite {
 	fs := &FeatureSuite{
 		t:   t,
 		out: os.Stdout,
@@ -472,4 +454,12 @@ func (fs *FeatureSuite) start() {
 			}
 		})
 	}
+}
+
+func (fs *FeatureSuite) setOutput(w io.Writer) {
+	fs.out = w
+}
+
+func (fs *FeatureSuite) setParallel() {
+	fs.parallel = true
 }
