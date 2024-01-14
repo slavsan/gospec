@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -26,17 +27,52 @@ type featureStep struct {
 	indent int
 	kind   featureStepKind
 	title  string
-	cb     func()
-	// ..
+	cb     any
 }
 
 type World struct {
-	// ..
-	suite *FeatureSuite
+	T      *testing.T
+	suite  *FeatureSuite
+	values map[string]any
+	mu     sync.Mutex
+}
+
+func newWorld() *World {
+	return &World{
+		values: map[string]any{},
+	}
+}
+
+func (w *World) Get(name string) any {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	value, ok := w.values[name]
+	if !ok {
+		w.T.Errorf("world does not have value set for '%s'", name)
+	}
+	return value
+}
+
+func (w *World) Set(name string, value any) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.values[name] = value
+}
+
+func (w *World) Swap(name string, f func(any) any) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	value, ok := w.values[name]
+	if !ok {
+		w.T.Errorf("can not swap value, since world does not have value set for '%s', try setting it first", name)
+	}
+	newValue := f(value)
+	w.values[name] = newValue
 }
 
 type FeatureSuite struct {
 	t               testingInterface
+	parallel        bool
 	world           *World
 	stack           []*featureStep
 	backgroundStack []*featureStep
@@ -56,13 +92,17 @@ func WithOutput(w io.Writer) Option {
 	}
 }
 
+func WithParallel() Option {
+	return func(fs *FeatureSuite) {
+		fs.parallel = true
+	}
+}
+
 func NewFeatureSuite(t testingInterface, options ...Option) *FeatureSuite {
 	fs := &FeatureSuite{
-		t:     t,
-		world: &World{},
-		out:   os.Stdout,
+		t:   t,
+		out: os.Stdout,
 	}
-	fs.world.suite = fs
 	for _, o := range options {
 		o(fs)
 	}
@@ -70,17 +110,16 @@ func NewFeatureSuite(t testingInterface, options ...Option) *FeatureSuite {
 }
 
 func (fs *FeatureSuite) API() (
-	func(string, func()),
-	func(string, func()),
-	func(string, func()),
-	func(string, func()),
-	func(string, func()),
-	func(string, func()),
-	func() *World,
-	func(columns []string, items interface{}),
+	func(string, any),
+	func(string, any),
+	func(string, any),
+	func(string, any),
+	func(string, any),
+	func(string, any),
+	func(columns []string, items any),
 ) {
 	return fs.Feature, fs.Background, fs.Scenario, fs.Given,
-		fs.When, fs.Then, fs.World, fs.Table
+		fs.When, fs.Then, fs.Table
 }
 
 func (fs *FeatureSuite) prevKind() featureStepKind {
@@ -91,7 +130,7 @@ func (fs *FeatureSuite) prevKind() featureStepKind {
 	return fs.stack[len(fs.stack)-1].kind
 }
 
-func (fs *FeatureSuite) Feature(title string, cb func()) {
+func (fs *FeatureSuite) Feature(title string, cb any) {
 	fs.report = strings.Builder{}
 	fs.t.Helper()
 	if fs.prevKind() != isUndefined {
@@ -107,7 +146,8 @@ func (fs *FeatureSuite) Feature(title string, cb func()) {
 	}
 	fs.pushStack(s)
 
-	cb()
+	// TODO: validate cb is of correct type
+	cb.(func())()
 
 	// check if last there is a new suite added, if not, copy the stack here...
 	fs.popBackgroundFromStackIfExists()
@@ -198,7 +238,7 @@ func (fs *FeatureSuite) findIndexOfStep(s *featureStep) int {
 	return -1
 }
 
-func (fs *FeatureSuite) Background(title string, cb func()) {
+func (fs *FeatureSuite) Background(title string, cb any) {
 	fs.t.Helper()
 	if fs.prevKind() != isFeature {
 		fs.t.Errorf("invalid position for `Background` function, it must be inside a `Feature` call")
@@ -215,12 +255,12 @@ func (fs *FeatureSuite) Background(title string, cb func()) {
 	fs.inBackground = true
 	fs.pushToBackgroundStack(s)
 
-	cb()
+	cb.(func())()
 
 	fs.inBackground = false
 }
 
-func (fs *FeatureSuite) Scenario(title string, cb func()) {
+func (fs *FeatureSuite) Scenario(title string, cb any) {
 	fs.t.Helper()
 	if fs.prevKind() != isFeature && fs.prevKind() != isBackground {
 		fs.t.Errorf("invalid position for `Scenario` function, it must be inside a `Feature` call")
@@ -235,7 +275,7 @@ func (fs *FeatureSuite) Scenario(title string, cb func()) {
 	}
 	fs.pushStack(s)
 
-	cb()
+	cb.(func())()
 
 	if len(fs.stack) > 0 {
 		fs.copyStack()
@@ -245,7 +285,7 @@ func (fs *FeatureSuite) Scenario(title string, cb func()) {
 	fs.popStack(s)
 }
 
-func (fs *FeatureSuite) Given(title string, cb func()) {
+func (fs *FeatureSuite) Given(title string, cb any) {
 	fs.t.Helper()
 
 	fs.report.WriteString(fmt.Sprintf("\t\tGiven: %s\n", title))
@@ -262,7 +302,7 @@ func (fs *FeatureSuite) Given(title string, cb func()) {
 	}
 }
 
-func (fs *FeatureSuite) When(title string, cb func()) {
+func (fs *FeatureSuite) When(title string, cb any) {
 	fs.t.Helper()
 
 	fs.report.WriteString(fmt.Sprintf("\t\tWhen: %s\n", title))
@@ -280,7 +320,7 @@ func (fs *FeatureSuite) When(title string, cb func()) {
 	}
 }
 
-func (fs *FeatureSuite) Then(title string, cb func()) {
+func (fs *FeatureSuite) Then(title string, cb any) {
 	fs.t.Helper()
 
 	fs.report.WriteString(fmt.Sprintf("\t\tThen: %s\n", title))
@@ -392,11 +432,6 @@ func (fs *FeatureSuite) Table(columns []string, items interface{}) {
 	}
 }
 
-func (fs *FeatureSuite) World() *World {
-	fs.t.Helper()
-	return fs.world
-}
-
 func buildSuiteTitleForFeature(suite []*featureStep) string {
 	var sb strings.Builder
 	for i, s := range suite {
@@ -411,12 +446,29 @@ func buildSuiteTitleForFeature(suite []*featureStep) string {
 }
 
 func (fs *FeatureSuite) start() {
-	for _, suite := range fs.suites[fs.atSuiteIndex:] {
+	for i := fs.atSuiteIndex; i < len(fs.suites); i++ {
+		suite := fs.suites[i]
 		fs.atSuiteIndex++
 		fs.t.Run(buildSuiteTitleForFeature(suite), func(t *testing.T) {
+			world := newWorld()
+			world.T = t
+			if fs.parallel {
+				t.Parallel()
+				for _, s := range suite {
+					if s.kind == isGiven || s.kind == isWhen || s.kind == isThen {
+						s.cb.(func(w *World))(world)
+						continue
+					}
+					if s.cb != nil {
+						s.cb.(func())()
+					}
+				}
+				return
+			}
+
 			for _, s := range suite {
 				if s.cb != nil {
-					s.cb()
+					s.cb.(func())()
 				}
 			}
 		})

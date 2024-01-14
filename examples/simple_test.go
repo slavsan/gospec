@@ -8,7 +8,7 @@ import (
 )
 
 func TestSimple(t *testing.T) {
-	feature, background, scenario, given, when, then, _, _ :=
+	feature, background, scenario, given, when, then, _ :=
 		gospec.NewFeatureSuite(t).API()
 
 	feature("Cart", func() {
@@ -32,6 +32,18 @@ func TestSimple(t *testing.T) {
 			})
 			then("the cart should contain the correct two items", func() {
 				assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, cart)
+			})
+		})
+
+		scenario("removing items from the cart", func() {
+			given("the second item has already been removed", func() {
+				cart = cart[:1]
+			})
+			when("we remove the first item", func() {
+				cart = cart[:0]
+			})
+			then("the cart should contain 0 items", func() {
+				assert.Equal(t, []string{}, cart)
 			})
 		})
 	})

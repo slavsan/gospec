@@ -2,8 +2,11 @@ package gospec
 
 import (
 	"bytes"
+	"sort"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
@@ -18,6 +21,10 @@ func (m *mock) Helper() {
 	// ..
 }
 
+func (m *mock) Parallel() {
+	// ..
+}
+
 func (m *mock) Errorf(format string, args ...interface{}) {
 	var call []any
 	call = append(call, format)
@@ -27,7 +34,7 @@ func (m *mock) Errorf(format string, args ...interface{}) {
 
 func (m *mock) Run(name string, f func(t *testing.T)) bool {
 	m.testTitles = append(m.testTitles, name)
-	f(m.t)
+	m.t.Run(name, f)
 	return false
 }
 
@@ -43,7 +50,7 @@ func (m *assertMock) Assert(args ...any) {
 func TestFeaturesCanBeSetAtTopLevel(t *testing.T) {
 	var (
 		out     bytes.Buffer
-		tm      = &mock{}
+		tm      = &mock{t: t}
 		fs      = NewFeatureSuite(tm, WithOutput(&out))
 		feature = fs.Feature
 	)
@@ -65,7 +72,7 @@ func TestFeaturesCanBeSetAtTopLevel(t *testing.T) {
 func TestFeaturesCanNotBeNested(t *testing.T) {
 	var (
 		out         bytes.Buffer
-		testingMock = &mock{}
+		testingMock = &mock{t: t}
 		fs          = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = fs.Feature
 	)
@@ -82,7 +89,7 @@ func TestFeaturesCanNotBeNested(t *testing.T) {
 func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 	var (
 		out         bytes.Buffer
-		testingMock = &mock{}
+		testingMock = &mock{t: t}
 		fs          = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = fs.Feature
 		background  = fs.Background
@@ -117,7 +124,7 @@ func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 func TestScenariosCanNotBeNested(t *testing.T) {
 	var (
 		out         bytes.Buffer
-		testingMock = &mock{}
+		testingMock = &mock{t: t}
 		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
@@ -144,7 +151,7 @@ func TestScenariosCanNotBeNested(t *testing.T) {
 func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 	var (
 		out         bytes.Buffer
-		testingMock = &mock{}
+		testingMock = &mock{t: t}
 		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
@@ -190,7 +197,7 @@ func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 	var (
 		out         bytes.Buffer
-		testingMock = &mock{}
+		testingMock = &mock{t: t}
 		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
@@ -252,7 +259,7 @@ func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 	var (
 		out         bytes.Buffer
-		testingMock = &mock{}
+		testingMock = &mock{t: t}
 		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
@@ -310,7 +317,7 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 	var (
 		out         bytes.Buffer
-		testingMock = &mock{}
+		testingMock = &mock{t: t}
 		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
@@ -402,10 +409,9 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 		mockAssert  = &assertMock{}
 		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature, background, scenario,
-		given, when, then, world, table = spec.API()
+		given, when, then, table = spec.API()
 	)
 
-	_ = world
 	_ = table
 
 	feature("Checkout 1", func() {
@@ -547,10 +553,230 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 	}, "\n"), out.String())
 }
 
+func TestFeaturesGetExecutedInParallel(t *testing.T) {
+	t.Parallel()
+
+	var (
+		out         bytes.Buffer
+		testingMock = &mock{t: t}
+		mockAssert  = &assertMock{}
+		spec        = NewFeatureSuite(testingMock, WithOutput(&out), WithParallel())
+		feature, background, scenario,
+		given, when, then, table = spec.API()
+	)
+
+	var wg sync.WaitGroup
+	wg.Add(4)
+
+	_ = background
+	_ = table
+
+	done := make(chan bool, 1)
+
+	t.Run("run parallel tests", func(t *testing.T) {
+		feature("Checkout 1", func() {
+			background("background 1", func() {
+				given("given 1", func(w *World) {
+					w.Set("nums", []int{1})
+				})
+				when("when 1", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 2)
+					})
+				})
+				then("then 1", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 3)
+					})
+				})
+			})
+
+			scenario("scenario 1", func() {
+				given("given 2", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 4)
+					})
+				})
+				when("when 2", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 5)
+					})
+				})
+				then("then 2", func(w *World) {
+					defer wg.Done()
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 6)
+					})
+					mockAssert.Assert(w.Get("nums"))
+				})
+			})
+
+			scenario("scenario 2", func() {
+				given("given 2", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 7)
+					})
+				})
+				when("when 2", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 8)
+					})
+				})
+				then("then 2", func(w *World) {
+					defer wg.Done()
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 9)
+					})
+					mockAssert.Assert(w.Get("nums"))
+				})
+			})
+		})
+
+		feature("Checkout 2", func() {
+			background("background 11", func() {
+				given("given 11", func(w *World) {
+					w.Set("nums", []int{11})
+				})
+				when("when 11", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 12)
+					})
+				})
+				then("then 11", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 13)
+					})
+				})
+			})
+
+			scenario("scenario 11", func() {
+				given("given 12", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 14)
+					})
+				})
+				when("when 12", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 15)
+					})
+				})
+				then("then 12", func(w *World) {
+					defer wg.Done()
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 16)
+					})
+					mockAssert.Assert(w.Get("nums"))
+				})
+			})
+
+			scenario("scenario 12", func() {
+				given("given 12", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 17)
+					})
+				})
+				when("when 12", func(w *World) {
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 18)
+					})
+				})
+				then("then 12", func(w *World) {
+					defer wg.Done()
+					w.Swap("nums", func(current any) any {
+						return append(current.([]int), 19)
+					})
+					mockAssert.Assert(w.Get("nums"))
+				})
+			})
+		})
+	})
+
+	t.Run("assert parallel tests run correctly", func(t *testing.T) {
+		t.Parallel()
+
+		go func() {
+			wg.Wait()
+			done <- true
+		}()
+
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Errorf("test timed out")
+		}
+
+		assert.Equal(t, [][]any(nil), testingMock.calls)
+		assert.Equal(t, 4, len(mockAssert.calls))
+
+		// sort the calls since they will come out of order because of the tests executing in parallel
+		sort.Slice(mockAssert.calls, func(i, j int) bool {
+			if len(mockAssert.calls[i][0].([]int)) == len(mockAssert.calls[j][0].([]int)) {
+				for index := 0; index < len(mockAssert.calls[i][0].([]int)); index++ {
+					if (mockAssert.calls[i][0].([]int))[index] == (mockAssert.calls[j][0].([]int))[index] {
+						continue
+					}
+					return (mockAssert.calls[i][0].([]int))[index] < (mockAssert.calls[j][0].([]int))[index]
+				}
+			}
+			return len(mockAssert.calls[i]) < len(mockAssert.calls[j])
+		})
+
+		assert.Equal(t, []any{[]int{1, 2, 3, 4, 5, 6}}, mockAssert.calls[0])
+		assert.Equal(t, []any{[]int{1, 2, 3, 7, 8, 9}}, mockAssert.calls[1])
+		assert.Equal(t, []any{[]int{11, 12, 13, 14, 15, 16}}, mockAssert.calls[2])
+		assert.Equal(t, []any{[]int{11, 12, 13, 17, 18, 19}}, mockAssert.calls[3])
+
+		assert.Equal(t, []string{
+			"Checkout 1/scenario 1",
+			"Checkout 1/scenario 2",
+			"Checkout 2/scenario 11",
+			"Checkout 2/scenario 12",
+		}, testingMock.testTitles)
+
+		assert.Equal(t, strings.Join([]string{
+			`Feature: Checkout 1`,
+			``,
+			`	Background: background 1`,
+			`		Given: given 1`,
+			`		When: when 1`,
+			`		Then: then 1`,
+			``,
+			`	Scenario: scenario 1`,
+			`		Given: given 2`,
+			`		When: when 2`,
+			`		Then: then 2`,
+			``,
+			`	Scenario: scenario 2`,
+			`		Given: given 2`,
+			`		When: when 2`,
+			`		Then: then 2`,
+			``,
+			`Feature: Checkout 2`,
+			``,
+			`	Background: background 11`,
+			`		Given: given 11`,
+			`		When: when 11`,
+			`		Then: then 11`,
+			``,
+			`	Scenario: scenario 11`,
+			`		Given: given 12`,
+			`		When: when 12`,
+			`		Then: then 12`,
+			``,
+			`	Scenario: scenario 12`,
+			`		Given: given 12`,
+			`		When: when 12`,
+			`		Then: then 12`,
+			``,
+			``,
+		}, "\n"), out.String())
+	})
+}
+
 func TestTableOutput(t *testing.T) {
 	var (
 		out         bytes.Buffer
-		testingMock = &mock{}
+		testingMock = &mock{t: t}
 		spec        = NewFeatureSuite(testingMock, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
