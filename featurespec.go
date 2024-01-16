@@ -78,6 +78,7 @@ type FeatureSuite struct {
 	atSuiteIndex    int
 	out             io.Writer
 	report          strings.Builder
+	printFilenames  bool
 }
 
 func NewFeatureSuite(t testingInterface, options ...SuiteOption) *FeatureSuite {
@@ -458,6 +459,10 @@ func (fs *FeatureSuite) start() {
 
 func (fs *FeatureSuite) setOutput(w io.Writer) {
 	fs.out = w
+}
+
+func (fs *FeatureSuite) setPrintFilenames() {
+	fs.printFilenames = true
 }
 
 func (fs *FeatureSuite) setParallel() {

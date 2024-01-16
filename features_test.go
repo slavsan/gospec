@@ -39,10 +39,13 @@ func (m *mock) Run(name string, f func(t *testing.T)) bool {
 }
 
 type assertMock struct {
+	mu    sync.Mutex
 	calls [][]any
 }
 
 func (m *assertMock) Assert(args ...any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.calls = append(m.calls, args)
 	// ..
 }

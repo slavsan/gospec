@@ -1,21 +1,25 @@
 package gospec
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 type Suite struct {
-	t            testingInterface
-	stack        []*step
-	suites       [][]*step
-	indent       int
-	atSuiteIndex int
-	out          io.Writer
-	report       strings.Builder
+	t              testingInterface
+	stack          []*step
+	suites         [][]*step
+	indent         int
+	atSuiteIndex   int
+	out            io.Writer
+	report         strings.Builder
+	basePath       string
+	printFilenames bool
 }
 
 type block int
@@ -24,6 +28,11 @@ const (
 	isDescribe block = iota
 	isBeforeEach
 	isIt
+)
+
+var (
+	basePath      string
+	isBasePathSet bool
 )
 
 type step struct {
@@ -35,9 +44,10 @@ type step struct {
 
 func NewTestSuite(t testingInterface, options ...SuiteOption) *Suite {
 	suite := &Suite{
-		t:      t,
-		out:    os.Stdout,
-		indent: 0,
+		t:        t,
+		out:      os.Stdout,
+		indent:   0,
+		basePath: getBasePath(),
 	}
 	for _, o := range options {
 		o(suite)
@@ -128,6 +138,24 @@ func (suite *Suite) findIndexOfStep(s *step) int {
 	return -1
 }
 
+func (suite *Suite) print(title string) {
+	pc, file, lineNo, ok := runtime.Caller(2)
+	_ = pc
+	_ = file
+	_ = lineNo
+	_ = ok
+
+	if !suite.printFilenames {
+		suite.report.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat("\t", suite.indent), title))
+		return
+	}
+
+	suite.report.WriteString(fmt.Sprintf("%s%s\t%s:%d\n",
+		strings.Repeat("\t", suite.indent), title,
+		strings.TrimPrefix(file, suite.basePath), lineNo,
+	))
+}
+
 func (suite *Suite) Describe(title string, cb any) {
 	suite.t.Helper()
 
@@ -138,7 +166,7 @@ func (suite *Suite) Describe(title string, cb any) {
 		suite.report = strings.Builder{}
 	}
 
-	suite.report.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat("\t", suite.indent), title))
+	suite.print(title)
 
 	suite.indent++
 
@@ -179,7 +207,7 @@ func (suite *Suite) BeforeEach(cb func()) {
 func (suite *Suite) It(title string, cb func()) {
 	suite.t.Helper()
 
-	suite.report.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat("\t", suite.indent), title))
+	suite.print(title)
 
 	s := &step{
 		title:  title,
@@ -214,6 +242,40 @@ func (suite *Suite) setOutput(w io.Writer) {
 	suite.out = w
 }
 
+func (suite *Suite) setPrintFilenames() {
+	suite.printFilenames = true
+}
+
 func (suite *Suite) setParallel() {
 	// TODO: implement parallel execution for Test suites
+}
+
+func getBasePath() string {
+	if isBasePathSet {
+		return basePath
+	}
+
+	isBasePathSet = true
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return basePath
+	}
+
+	parts := strings.Split(cwd, "/")
+	for i := len(parts); i >= 0; i-- {
+		pathWithoutGoMod := strings.Join(parts[:i], "/") + "/"
+		goModFile := pathWithoutGoMod + "go.mod"
+		_, err = os.Stat(goModFile)
+		if err == nil {
+			basePath = pathWithoutGoMod
+			break
+		}
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		basePath = pathWithoutGoMod
+	}
+
+	return basePath
 }
