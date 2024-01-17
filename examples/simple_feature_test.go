@@ -7,7 +7,7 @@ import (
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
 
-func TestSimple(t *testing.T) {
+func TestSimpleFeatureExample(t *testing.T) {
 	feature, background, scenario, given, when, then, _ :=
 		gospec.NewFeatureSuite(t).API()
 

@@ -12,6 +12,7 @@ import (
 
 type Suite struct {
 	t              testingInterface
+	parallel       bool
 	stack          []*step
 	suites         [][]*step
 	indent         int
@@ -39,7 +40,7 @@ type step struct {
 	indent int
 	block  block
 	title  string
-	cb     func()
+	cb     any
 }
 
 func NewTestSuite(t testingInterface, options ...SuiteOption) *Suite {
@@ -55,14 +56,38 @@ func NewTestSuite(t testingInterface, options ...SuiteOption) *Suite {
 	return suite
 }
 
+func (suite *Suite) API() (
+	func(string, any),
+	func(any),
+	func(string, any),
+) {
+	return suite.Describe, suite.BeforeEach, suite.It
+}
+
 func (suite *Suite) start() {
 	for i := suite.atSuiteIndex; i < len(suite.suites); i++ {
 		suite2 := suite.suites[i]
 		suite.atSuiteIndex++
 		suite.t.Run(buildSuiteTitle(suite2), func(t *testing.T) {
+			world := newWorld()
+			world.T = t
+			if suite.parallel {
+				t.Parallel()
+				for _, s := range suite2 {
+					if s.block == isIt || s.block == isBeforeEach {
+						s.cb.(func(w *World))(world)
+						continue
+					}
+					if s.cb != nil {
+						s.cb.(func())()
+					}
+				}
+				return
+			}
+
 			for _, s := range suite2 {
 				if s.cb != nil {
-					s.cb()
+					s.cb.(func())()
 				}
 			}
 		})
@@ -192,7 +217,7 @@ func (suite *Suite) Describe(title string, cb any) {
 	}
 }
 
-func (suite *Suite) BeforeEach(cb func()) {
+func (suite *Suite) BeforeEach(cb any) {
 	suite.t.Helper()
 
 	s := &step{
@@ -204,10 +229,12 @@ func (suite *Suite) BeforeEach(cb func()) {
 	suite.pushStack(s)
 }
 
-func (suite *Suite) It(title string, cb func()) {
+func (suite *Suite) It(title string, cb any) {
 	suite.t.Helper()
 
 	suite.print(title)
+
+	// TODO: check if parallel and make sure `cb` is defined with *World as the first arg
 
 	s := &step{
 		title:  title,
@@ -247,6 +274,7 @@ func (suite *Suite) setPrintFilenames() {
 }
 
 func (suite *Suite) setParallel() {
+	suite.parallel = true
 	// TODO: implement parallel execution for Test suites
 }
 

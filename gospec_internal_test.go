@@ -2,8 +2,11 @@ package gospec
 
 import (
 	"bytes"
+	"sort"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
@@ -513,4 +516,236 @@ func TestSequentialExecution(t *testing.T) {
 		``,
 		``,
 	}, "\n"), out.String())
+}
+
+func TestSpecSuitesGetExecutedInParallel(t *testing.T) {
+	t.Parallel()
+
+	var (
+		out                      bytes.Buffer
+		testingMock              = &mock{t: t}
+		mockAssert               = &assertMock{}
+		spec                     = NewTestSuite(testingMock, WithOutput(&out), WithParallel())
+		describe, beforeEach, it = spec.API()
+	)
+
+	var wg sync.WaitGroup
+	wg.Add(4)
+
+	done := make(chan bool, 1)
+
+	t.Run("run parallel tests", func(t *testing.T) {
+		describe("Checkout 1", func() {
+			describe("given 1", func() {
+				beforeEach(func(w *World) {
+					w.Set("nums", []int{1})
+				})
+
+				describe("when 1", func() {
+					beforeEach(func(w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 2)
+						})
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 3)
+						})
+					})
+
+					describe("scenario 1", func() {
+						describe("given 2", func() {
+							beforeEach(func(w *World) {
+								w.Swap("nums", func(current any) any {
+									return append(current.([]int), 4)
+								})
+							})
+
+							describe("when 2", func() {
+								beforeEach(func(w *World) {
+									w.Swap("nums", func(current any) any {
+										return append(current.([]int), 5)
+									})
+								})
+
+								it("then 2", func(w *World) {
+									defer wg.Done()
+									w.Swap("nums", func(current any) any {
+										return append(current.([]int), 6)
+									})
+									mockAssert.Assert(w.Get("nums"))
+								})
+							})
+						})
+					})
+
+					describe("scenario 2", func() {
+						describe("given 2", func() {
+							beforeEach(func(w *World) {
+								w.Swap("nums", func(current any) any {
+									return append(current.([]int), 7)
+								})
+							})
+
+							describe("when 2", func() {
+								beforeEach(func(w *World) {
+									w.Swap("nums", func(current any) any {
+										return append(current.([]int), 8)
+									})
+								})
+
+								it("then 2", func(w *World) {
+									defer wg.Done()
+									w.Swap("nums", func(current any) any {
+										return append(current.([]int), 9)
+									})
+									mockAssert.Assert(w.Get("nums"))
+								})
+							})
+						})
+					})
+				})
+			})
+		})
+
+		describe("Checkout 2", func() {
+			describe("given 11", func() {
+				beforeEach(func(w *World) {
+					w.Set("nums", []int{11})
+				})
+
+				describe("when 11", func() {
+					beforeEach(func(w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 12)
+						})
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 13)
+						})
+					})
+
+					describe("scenario 11", func() {
+						describe("given 12", func() {
+							beforeEach(func(w *World) {
+								w.Swap("nums", func(current any) any {
+									return append(current.([]int), 14)
+								})
+							})
+
+							describe("when 12", func() {
+								beforeEach(func(w *World) {
+									w.Swap("nums", func(current any) any {
+										return append(current.([]int), 15)
+									})
+								})
+
+								it("then 12", func(w *World) {
+									defer wg.Done()
+									w.Swap("nums", func(current any) any {
+										return append(current.([]int), 16)
+									})
+									mockAssert.Assert(w.Get("nums"))
+								})
+							})
+						})
+					})
+
+					describe("scenario 12", func() {
+						describe("given 12", func() {
+							beforeEach(func(w *World) {
+								w.Swap("nums", func(current any) any {
+									return append(current.([]int), 17)
+								})
+							})
+
+							describe("when 12", func() {
+								beforeEach(func(w *World) {
+									w.Swap("nums", func(current any) any {
+										return append(current.([]int), 18)
+									})
+								})
+
+								it("then 12", func(w *World) {
+									defer wg.Done()
+									w.Swap("nums", func(current any) any {
+										return append(current.([]int), 19)
+									})
+									mockAssert.Assert(w.Get("nums"))
+								})
+							})
+						})
+					})
+				})
+			})
+		})
+	})
+
+	t.Run("assert parallel tests run correctly", func(t *testing.T) {
+		t.Parallel()
+
+		go func() {
+			wg.Wait()
+			done <- true
+		}()
+
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Errorf("test timed out")
+		}
+
+		assert.Equal(t, [][]any(nil), testingMock.calls)
+		assert.Equal(t, 4, len(mockAssert.calls))
+
+		// sort the calls since they will come out of order because of the tests executing in parallel
+		sort.Slice(mockAssert.calls, func(i, j int) bool {
+			if len(mockAssert.calls[i][0].([]int)) == len(mockAssert.calls[j][0].([]int)) {
+				for index := 0; index < len(mockAssert.calls[i][0].([]int)); index++ {
+					if (mockAssert.calls[i][0].([]int))[index] == (mockAssert.calls[j][0].([]int))[index] {
+						continue
+					}
+					return (mockAssert.calls[i][0].([]int))[index] < (mockAssert.calls[j][0].([]int))[index]
+				}
+			}
+			return len(mockAssert.calls[i]) < len(mockAssert.calls[j])
+		})
+
+		assert.Equal(t, []any{[]int{1, 2, 3, 4, 5, 6}}, mockAssert.calls[0])
+		assert.Equal(t, []any{[]int{1, 2, 3, 7, 8, 9}}, mockAssert.calls[1])
+		assert.Equal(t, []any{[]int{11, 12, 13, 14, 15, 16}}, mockAssert.calls[2])
+		assert.Equal(t, []any{[]int{11, 12, 13, 17, 18, 19}}, mockAssert.calls[3])
+
+		assert.Equal(t, []string{
+			"Checkout 1/given 1/when 1/scenario 1/given 2/when 2/then 2",
+			"Checkout 1/given 1/when 1/scenario 2/given 2/when 2/then 2",
+			"Checkout 2/given 11/when 11/scenario 11/given 12/when 12/then 12",
+			"Checkout 2/given 11/when 11/scenario 12/given 12/when 12/then 12",
+		}, testingMock.testTitles)
+
+		assert.Equal(t, strings.Join([]string{
+			`Checkout 1`,
+			`	given 1`,
+			`		when 1`,
+			`			scenario 1`,
+			`				given 2`,
+			`					when 2`,
+			`						then 2`,
+			`			scenario 2`,
+			`				given 2`,
+			`					when 2`,
+			`						then 2`,
+			``,
+			`Checkout 2`,
+			`	given 11`,
+			`		when 11`,
+			`			scenario 11`,
+			`				given 12`,
+			`					when 12`,
+			`						then 12`,
+			`			scenario 12`,
+			`				given 12`,
+			`					when 12`,
+			`						then 12`,
+			``,
+			``,
+		}, "\n"), out.String())
+	})
 }

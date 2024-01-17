@@ -7,7 +7,7 @@ import (
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
 
-func TestParallel(t *testing.T) {
+func TestFeatureInParallelExample(t *testing.T) {
 	t.Parallel()
 
 	feature, background, scenario, given, when, then, _ :=
