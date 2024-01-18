@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -78,13 +79,15 @@ type FeatureSuite struct {
 	atSuiteIndex    int
 	out             io.Writer
 	report          strings.Builder
+	basePath        string
 	printFilenames  bool
 }
 
 func NewFeatureSuite(t testingInterface, options ...SuiteOption) *FeatureSuite {
 	fs := &FeatureSuite{
-		t:   t,
-		out: os.Stdout,
+		t:        t,
+		out:      os.Stdout,
+		basePath: getBasePath(),
 	}
 	for _, o := range options {
 		o(fs)
@@ -121,7 +124,7 @@ func (fs *FeatureSuite) Feature(title string, cb any) {
 		return
 	}
 
-	fs.report.WriteString(fmt.Sprintf("Feature: %s\n", title))
+	fs.print(fmt.Sprintf("Feature: %s", title))
 
 	s := &featureStep{
 		kind:  isFeature,
@@ -228,7 +231,7 @@ func (fs *FeatureSuite) Background(cb any) {
 		return
 	}
 
-	fs.report.WriteString("\n\tBackground:\n")
+	fs.print("\n\tBackground:")
 
 	s := &featureStep{
 		kind: isBackground,
@@ -249,7 +252,7 @@ func (fs *FeatureSuite) Scenario(title string, cb any) {
 		return
 	}
 
-	fs.report.WriteString(fmt.Sprintf("\n\tScenario: %s\n", title))
+	fs.print(fmt.Sprintf("\n\tScenario: %s", title))
 
 	s := &featureStep{
 		kind:  isScenario,
@@ -270,7 +273,7 @@ func (fs *FeatureSuite) Scenario(title string, cb any) {
 func (fs *FeatureSuite) Given(title string, cb any) {
 	fs.t.Helper()
 
-	fs.report.WriteString(fmt.Sprintf("\t\tGiven: %s\n", title))
+	fs.print(fmt.Sprintf("\t\tGiven: %s", title))
 
 	s := &featureStep{
 		kind:  isGiven,
@@ -287,7 +290,7 @@ func (fs *FeatureSuite) Given(title string, cb any) {
 func (fs *FeatureSuite) When(title string, cb any) {
 	fs.t.Helper()
 
-	fs.report.WriteString(fmt.Sprintf("\t\tWhen: %s\n", title))
+	fs.print(fmt.Sprintf("\t\tWhen: %s", title))
 
 	s := &featureStep{
 		kind:  isWhen,
@@ -305,7 +308,7 @@ func (fs *FeatureSuite) When(title string, cb any) {
 func (fs *FeatureSuite) Then(title string, cb any) {
 	fs.t.Helper()
 
-	fs.report.WriteString(fmt.Sprintf("\t\tThen: %s\n", title))
+	fs.print(fmt.Sprintf("\t\tThen: %s", title))
 
 	s := &featureStep{
 		kind:  isThen,
@@ -455,6 +458,23 @@ func (fs *FeatureSuite) start() {
 			}
 		})
 	}
+}
+
+func (fs *FeatureSuite) print(title string) {
+	pc, file, lineNo, ok := runtime.Caller(2)
+	_ = pc
+	_ = file
+	_ = lineNo
+	_ = ok
+
+	if !fs.printFilenames {
+		fs.report.WriteString(title + "\n")
+		return
+	}
+
+	fs.report.WriteString(fmt.Sprintf("%s\t%s:%d\n",
+		title, strings.TrimPrefix(file, fs.basePath), lineNo,
+	))
 }
 
 func (fs *FeatureSuite) setOutput(w io.Writer) {
