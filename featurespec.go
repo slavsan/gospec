@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 )
 
@@ -30,45 +29,17 @@ type featureStep struct {
 	cb    any
 }
 
-type World struct {
-	T      *testing.T
-	values map[string]any
-	mu     sync.Mutex
-}
-
-func newWorld() *World {
-	return &World{
-		values: map[string]any{},
-	}
-}
-
-func (w *World) Get(name string) any {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	value, ok := w.values[name]
-	if !ok {
-		w.T.Errorf("world does not have value set for '%s'", name)
-	}
-	return value
-}
-
-func (w *World) Set(name string, value any) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.values[name] = value
-}
-
-func (w *World) Swap(name string, f func(any) any) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	value, ok := w.values[name]
-	if !ok {
-		w.T.Errorf("can not swap value, since world does not have value set for '%s', try setting it first", name)
-	}
-	newValue := f(value)
-	w.values[name] = newValue
-}
-
+// FeatureSuite is a test suite which is inspired by the Cucumber/Gherkin
+// style of writing tests, in terms of defining: features, scenarios and
+// given/when/then steps.
+//
+// Instead of using the Gherkin syntax though, the FeatureSuite exposes
+// an API (methods) which resemble this way of structuring tests for
+// defining the behaviour of production code.
+//
+// Those methods are: [FeatureSuite.Feature], [FeatureSuite.Background],
+// [FeatureSuite.Scenario], [FeatureSuite.Given], [FeatureSuite.When],
+// [FeatureSuite.Then]
 type FeatureSuite struct {
 	t               testingInterface
 	parallel        bool
@@ -83,6 +54,7 @@ type FeatureSuite struct {
 	printFilenames  bool
 }
 
+// NewFeatureSuite returns a new [FeatureSuite] instance.
 func NewFeatureSuite(t testingInterface, options ...SuiteOption) *FeatureSuite {
 	fs := &FeatureSuite{
 		t:        t,
@@ -95,6 +67,34 @@ func NewFeatureSuite(t testingInterface, options ...SuiteOption) *FeatureSuite {
 	return fs
 }
 
+// API returns the exposed methods on the [FeatureSuite] instance. It's intended usage is as follows:
+//
+//	feature, background, scenario, given, when, then, _ :=
+//		gospec.NewFeatureSuite(t).API()
+//
+//	feature("my feature", func() {
+//		var cart []string
+//
+//		background(func() {
+//			given("some precondition", func() {
+//				// ...
+//			})
+//		})
+//
+//		scenario("when ..", func() {
+//			given("another nested precondition", func() {
+//				// ...
+//			})
+//			when("something gets executed", func() {
+//				// ...
+//			})
+//			then("something should happen", func() {
+//				// ...
+//			})
+//		})
+//	})
+//
+// ..
 func (fs *FeatureSuite) API() (
 	func(string, any),
 	func(any),
@@ -116,6 +116,8 @@ func (fs *FeatureSuite) prevKind() featureStepKind {
 	return fs.stack[len(fs.stack)-1].kind
 }
 
+// Feature defines a feature block, this is the top-level block and should
+// define a separate piece of functionality.
 func (fs *FeatureSuite) Feature(title string, cb any) {
 	fs.report = strings.Builder{}
 	fs.t.Helper()
@@ -224,6 +226,8 @@ func (fs *FeatureSuite) findIndexOfStep(s *featureStep) int {
 	return -1
 }
 
+// Background defines a block which would get executed before each [FeatureSuite.Scenario].
+// It can contain multiple [FeatureSuite.Given] steps.
 func (fs *FeatureSuite) Background(cb any) {
 	fs.t.Helper()
 	if fs.prevKind() != isFeature {
@@ -245,6 +249,8 @@ func (fs *FeatureSuite) Background(cb any) {
 	fs.inBackground = false
 }
 
+// Scenario defines a scenario block. It should test a particular feature in a particular
+// scenario, provided a set of given/when/then steps.
 func (fs *FeatureSuite) Scenario(title string, cb any) {
 	fs.t.Helper()
 	if fs.prevKind() != isFeature && fs.prevKind() != isBackground {
@@ -270,6 +276,9 @@ func (fs *FeatureSuite) Scenario(title string, cb any) {
 	fs.popStack(s)
 }
 
+// Given defines a block which is meant to build the prerequisites for a particular
+// test. It's usual to have any test setup logic defined in a [FeatureSuite.Given]
+// block.
 func (fs *FeatureSuite) Given(title string, cb any) {
 	fs.t.Helper()
 
@@ -287,6 +296,7 @@ func (fs *FeatureSuite) Given(title string, cb any) {
 	}
 }
 
+// When defines a block which should exercise the actual test.
 func (fs *FeatureSuite) When(title string, cb any) {
 	fs.t.Helper()
 
@@ -305,6 +315,7 @@ func (fs *FeatureSuite) When(title string, cb any) {
 	}
 }
 
+// Then defines a block which should hold a set of assertions.
 func (fs *FeatureSuite) Then(title string, cb any) {
 	fs.t.Helper()
 
@@ -341,6 +352,7 @@ func (fs *FeatureSuite) copyStack() {
 	fs.suites = append(fs.suites, suite)
 }
 
+// Table is a utility function to only visualize test data in a table.
 func (fs *FeatureSuite) Table(columns []string, items interface{}) {
 	fs.t.Helper()
 
@@ -461,11 +473,7 @@ func (fs *FeatureSuite) start() {
 }
 
 func (fs *FeatureSuite) print(title string) {
-	pc, file, lineNo, ok := runtime.Caller(2)
-	_ = pc
-	_ = file
-	_ = lineNo
-	_ = ok
+	_, file, lineNo, _ := runtime.Caller(2)
 
 	if !fs.printFilenames {
 		fs.report.WriteString(title + "\n")

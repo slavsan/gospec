@@ -10,6 +10,10 @@ import (
 	"testing"
 )
 
+// Suite is a spec suite which follows the rspec syntax, i.e.
+// describe, beforeEach, it blocks, etc. It has several methods
+// that can be called on it: [Suite.Describe], [Suite.BeforeEach],
+// and [Suite.It]
 type Suite struct {
 	t              testingInterface
 	parallel       bool
@@ -43,6 +47,7 @@ type step struct {
 	cb     any
 }
 
+// NewTestSuite creates a new instance of Suite.
 func NewTestSuite(t testingInterface, options ...SuiteOption) *Suite {
 	suite := &Suite{
 		t:        t,
@@ -56,6 +61,42 @@ func NewTestSuite(t testingInterface, options ...SuiteOption) *Suite {
 	return suite
 }
 
+// API returns the exposed methods on the [Suite] instance. It's intended usage is as follows:
+//
+//	describe, beforeEach, it := gospec.NewTestSuite(t).API()
+//
+//	describe("my feature", func() {
+//		beforeEach(func() {
+//			// ..
+//		})
+//
+//		// ..
+//	})
+//
+// The reason for this lies in the influence gospec has from rspec, mocha, and other
+// BDD frameworks, which have a similar API and general look and feel (namely the
+// lowercase describe, beforeEach, it functions).
+//
+// Alternatively you can export the Describe, BeforeEach, and It like so
+//
+//	var (
+//		spec = gospec.NewTestSuite(t)
+//		describe = spec.Describe
+//		beforeEach = spec.BeforeEach
+//		it = spec.It
+//	)
+//
+// Or, you can just instantiate the suite instance and use the public methods on it directly
+//
+//	spec := gospec.NewTestSuite(t)
+//
+//	spec.Describe("my feature", func() {
+//		spec.BeforeEach(func() {
+//			// ..
+//		})
+//
+//		// ..
+//	})
 func (suite *Suite) API() (
 	func(string, any),
 	func(any),
@@ -181,6 +222,17 @@ func (suite *Suite) print(title string) {
 	))
 }
 
+// Describe is a function which describes a feature or contextual logical
+// block, which may contain inner describe, beforeEach, or it blocks.
+//
+// It's important to note that Describe blocks should not mutate any state.
+// The expected usage is for variables to be defined in a Describe block but
+// not initialized or assigned there.
+//
+// When the [WithParallel] is used, even declaring variables in Describe is not
+// expected or advised since it would lead to undefined behaviour or race conditions.
+// In those cases, just use the [World] construct which would get passed to
+// all [Suite.BeforeEach] and [Suite.It] function calls.
 func (suite *Suite) Describe(title string, cb any) {
 	suite.t.Helper()
 
@@ -217,6 +269,12 @@ func (suite *Suite) Describe(title string, cb any) {
 	}
 }
 
+// BeforeEach is a function which executes before each [Suite.It] or [Suite.Describe]
+// block which is defined after it.
+//
+// It is used for assigning values to variables which are then used in the following
+// blocks. If the [Suite.BeforeEach] block is not followed by a [Suite.It] block, it
+// will not get executed.
 func (suite *Suite) BeforeEach(cb any) {
 	suite.t.Helper()
 
@@ -229,6 +287,8 @@ func (suite *Suite) BeforeEach(cb any) {
 	suite.pushStack(s)
 }
 
+// It defines a block which gets executed in a test suite as the last step. [Suite.It] blocks
+// can not be nested.
 func (suite *Suite) It(title string, cb any) {
 	suite.t.Helper()
 
@@ -275,7 +335,6 @@ func (suite *Suite) setPrintFilenames() {
 
 func (suite *Suite) setParallel() {
 	suite.parallel = true
-	// TODO: implement parallel execution for Test suites
 }
 
 func getBasePath() string {
