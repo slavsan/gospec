@@ -24,7 +24,7 @@ jobs:
           args: --timeout=2m --config=.golangci.yaml
 
       - name: Test
-        run: go test -race -v ./...
+        run: go test -race -v -coverprofile coverage.out -coverpkg ./... ./...
 
       - name: Install gocov
         run: go install github.com/slavsan/gocov@latest
