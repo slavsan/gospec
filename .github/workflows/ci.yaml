@@ -1,0 +1,33 @@
+name: Go package
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.49
+          args: --timeout=2m --config=.golangci.yaml
+
+      - name: Test
+        run: go test -race -v ./...
+
+      - name: Install gocov
+        run: go install github.com/slavsan/gocov@latest
+
+      - name: Check coverage
+        run: gocov report && gocov check
