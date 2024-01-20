@@ -361,7 +361,7 @@ func (fs *FeatureSuite) Table(columns []string, items interface{}) {
 	items2 := reflect.ValueOf(items)
 
 	if items2.Kind() != reflect.Slice {
-		panic("EXPECTED SLICE...\n")
+		fs.t.Errorf("expected items to be of type slice but was of type: %v", reflect.TypeOf(items))
 		return
 	}
 
@@ -383,6 +383,7 @@ func (fs *FeatureSuite) Table(columns []string, items interface{}) {
 				name := v.Type().Field(j).Name
 				value := v.Field(j).Interface()
 				maxWidth, ok := columnWidths[name]
+				_ = maxWidth
 				if !ok {
 					continue
 				}
