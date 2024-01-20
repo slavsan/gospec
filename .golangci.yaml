@@ -26,7 +26,11 @@ linters:
     - forcetypeassert
     - wrapcheck
     - tagliatelle
-    - gocritic
+    - dupl
+    - funlen
+    - testpackage
+    - testableexamples
+    - depguard
 linters-settings:
   cyclop:
     max-complexity: 13

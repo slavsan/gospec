@@ -8,10 +8,9 @@ import (
 // Do not execute this example because it will fail. It's not a real
 // test and its purpose is purely presentational.
 
-// ExampleFeatureSuite shows an example gospec.FeatureSuite
+// ExampleFeatureSuite shows an example gospec.FeatureSuite.
 func Example_featureSuite() {
-	feature, background, scenario, given, when, then, _ :=
-		gospec.NewFeatureSuite(t, gospec.WithPrintedFilenames()).API()
+	feature, background, scenario, given, when, then, _ := gospec.NewFeatureSuite(t, gospec.WithPrintedFilenames()).API()
 
 	feature("Cart", func() {
 		var cart []string

@@ -8,7 +8,7 @@ import (
 // Do not execute this example because it will fail. It's not a real
 // test and its purpose is purely presentational.
 
-// ExampleTestSuite shows an example gospec.Suite
+// ExampleTestSuite shows an example gospec.Suite.
 func Example_suite() {
 	describe, beforeEach, it := gospec.NewTestSuite(t).API()
 

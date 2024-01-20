@@ -39,7 +39,7 @@ type featureStep struct {
 //
 // Those methods are: [FeatureSuite.Feature], [FeatureSuite.Background],
 // [FeatureSuite.Scenario], [FeatureSuite.Given], [FeatureSuite.When],
-// [FeatureSuite.Then]
+// [FeatureSuite.Then].
 type FeatureSuite struct {
 	t               testingInterface
 	parallel        bool
@@ -335,25 +335,19 @@ func (fs *FeatureSuite) Then(title string, cb any) {
 
 func (fs *FeatureSuite) copyStack() {
 	fs.t.Helper()
-	if len(fs.stack) <= 0 {
+	if len(fs.stack) == 0 {
 		return
 	}
 
-	var suite []*featureStep
-	for _, s := range fs.stack[:1] {
-		suite = append(suite, s)
-	}
-	for _, s := range fs.backgroundStack {
-		suite = append(suite, s)
-	}
-	for _, s := range fs.stack[1:] {
-		suite = append(suite, s)
-	}
+	suite := make([]*featureStep, 0, len(fs.stack)+len(fs.backgroundStack))
+	suite = append(suite, fs.stack[:1]...)
+	suite = append(suite, fs.backgroundStack...)
+	suite = append(suite, fs.stack[1:]...)
 	fs.suites = append(fs.suites, suite)
 }
 
 // Table is a utility function to only visualize test data in a table.
-func (fs *FeatureSuite) Table(columns []string, items interface{}) {
+func (fs *FeatureSuite) Table(columns []string, items interface{}) { //nolint:gocognit,cyclop
 	fs.t.Helper()
 
 	// TODO: validate table was called in valid call site
@@ -448,6 +442,7 @@ func (fs *FeatureSuite) start() {
 		suite := fs.suites[i]
 		fs.atSuiteIndex++
 		fs.t.Run(buildSuiteTitleForFeature(suite), func(t *testing.T) {
+			t.Helper()
 			world := newWorld()
 			world.T = t
 			if fs.parallel {
