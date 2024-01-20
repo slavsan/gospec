@@ -796,9 +796,7 @@ func TestTableOutput(t *testing.T) {
 			Type  int
 		}
 
-		var (
-			items []Product
-		)
+		var items []Product
 
 		scenario("scenario 1", func() {
 			given("given 1", func() {

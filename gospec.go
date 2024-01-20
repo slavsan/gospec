@@ -13,7 +13,7 @@ import (
 // Suite is a spec suite which follows the rspec syntax, i.e.
 // describe, beforeEach, it blocks, etc. It has several methods
 // that can be called on it: [Suite.Describe], [Suite.BeforeEach],
-// and [Suite.It]
+// and [Suite.It].
 type Suite struct {
 	t              testingInterface
 	parallel       bool
@@ -36,8 +36,8 @@ const (
 )
 
 var (
-	basePath      string
-	isBasePathSet bool
+	basePath      string //nolint:gochecknoglobals
+	isBasePathSet bool   //nolint:gochecknoglobals
 )
 
 type step struct {
@@ -110,6 +110,7 @@ func (suite *Suite) start() {
 		suite2 := suite.suites[i]
 		suite.atSuiteIndex++
 		suite.t.Run(buildSuiteTitle(suite2), func(t *testing.T) {
+			t.Helper()
 			world := newWorld()
 			world.T = t
 			if suite.parallel {
@@ -314,15 +315,13 @@ func (suite *Suite) It(title string, cb any) {
 
 func (suite *Suite) copyStack() {
 	suite.t.Helper()
-	if len(suite.stack) <= 0 {
+	if len(suite.stack) == 0 {
 		return
 	}
 
-	var ssuite []*step
-	for _, s := range suite.stack {
-		ssuite = append(ssuite, s)
-	}
-	suite.suites = append(suite.suites, ssuite)
+	suiteCopy := make([]*step, 0, len(suite.stack))
+	suiteCopy = append(suiteCopy, suite.stack...)
+	suite.suites = append(suite.suites, suiteCopy)
 }
 
 func (suite *Suite) setOutput(w io.Writer) {

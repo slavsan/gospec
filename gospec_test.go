@@ -9,8 +9,7 @@ import (
 
 func TestExampleSuite(t *testing.T) {
 	s := NewTestSuite(t)
-	describe, context, it, beforeEach :=
-		s.Describe, s.Describe, s.It, s.BeforeEach
+	describe, context, it, beforeEach := s.Describe, s.Describe, s.It, s.BeforeEach
 
 	describe("Checkout", func() {
 		context("when shopping cart has 1 item", func() {
@@ -35,7 +34,7 @@ func TestExampleSuite(t *testing.T) {
 				})
 				context("when the coupon is eligible for this purchase", func() {
 					context("and the coupon gets applied", func() {
-						context("but the coupon value is higher than the purcahse value", func() {
+						context("but the coupon value is higher than the purchase value", func() {
 							// ..
 						})
 						context("and the coupon value is less than the purchase value", func() {
@@ -73,8 +72,7 @@ func TestExampleSuite(t *testing.T) {
 
 func TestDescribe(t *testing.T) {
 	s := NewTestSuite(t)
-	describe, context, it, beforeEach :=
-		s.Describe, s.Describe, s.It, s.BeforeEach
+	describe, context, it, beforeEach := s.Describe, s.Describe, s.It, s.BeforeEach
 
 	describe("describe block", func() {
 		context("with single describe", func() {
@@ -157,10 +155,9 @@ func TestDescribe(t *testing.T) {
 	})
 }
 
-func TestIt(t *testing.T) {
+func TestIt(t *testing.T) { //nolint:maintidx
 	s := NewTestSuite(t)
-	describe, context, it, beforeEach :=
-		s.Describe, s.Describe, s.It, s.BeforeEach
+	describe, context, it, beforeEach := s.Describe, s.Describe, s.It, s.BeforeEach
 
 	describe("it block", func() {
 		context("with single describe and single it block", func() {
@@ -311,8 +308,7 @@ func TestIt(t *testing.T) {
 			var s2 *Suite
 			beforeEach(func() {
 				s2 = NewTestSuite(t)
-				describe2, context2, beforeEach2, it2 :=
-					s2.Describe, s2.Describe, s2.BeforeEach, s2.It
+				describe2, context2, beforeEach2, it2 := s2.Describe, s2.Describe, s2.BeforeEach, s2.It
 
 				// unit under test
 				describe2("Checkout", func() {
@@ -338,7 +334,7 @@ func TestIt(t *testing.T) {
 							})
 							context2("when the coupon is eligible for this purchase", func() {
 								context2("and the coupon gets applied", func() {
-									context2("but the coupon value is higher than the purcahse value", func() {
+									context2("but the coupon value is higher than the purchase value", func() {
 										// ..
 									})
 									context2("and the coupon value is less than the purchase value", func() {
@@ -395,8 +391,7 @@ func TestIt(t *testing.T) {
 			var s2 *Suite
 			beforeEach(func() {
 				s2 = NewTestSuite(t)
-				describe2, context2, beforeEach2, it2 :=
-					s2.Describe, s2.Describe, s2.BeforeEach, s2.It
+				describe2, context2, beforeEach2, it2 := s2.Describe, s2.Describe, s2.BeforeEach, s2.It
 
 				// unit under test
 				describe2("1", func() {

@@ -9,7 +9,7 @@ type SuiteOption func(suiteInterface SuiteInterface)
 // SuiteInterface is an interface implemented by both [Suite] and [FeatureSuite] suites. It is internal
 // and is used by the available [SuiteOption] implementations.
 type SuiteInterface interface {
-	setOutput(io.Writer)
+	setOutput(out io.Writer)
 	setParallel()
 	setPrintFilenames()
 }

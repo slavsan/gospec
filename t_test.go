@@ -6,4 +6,4 @@ import "testing"
 // will get reused between the other Example tests which are only
 // meant to be used for documentation purposes
 
-var t *testing.T
+var t *testing.T //nolint:gochecknoglobals
