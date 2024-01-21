@@ -294,7 +294,7 @@ func (suite *Suite) BeforeEach(cb any) {
 func (suite *Suite) It(title string, cb any) {
 	suite.t.Helper()
 
-	suite.print(title)
+	suite.print(fmt.Sprintf("✔ %s", title))
 
 	// TODO: check if parallel and make sure `cb` is defined with *World as the first arg
 

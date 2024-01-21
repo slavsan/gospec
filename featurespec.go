@@ -283,7 +283,7 @@ func (fs *FeatureSuite) Scenario(title string, cb any) {
 func (fs *FeatureSuite) Given(title string, cb any) {
 	fs.t.Helper()
 
-	fs.print(fmt.Sprintf("\t\tGiven: %s", title))
+	fs.print(fmt.Sprintf("\t\tGiven %s", title))
 
 	s := &featureStep{
 		kind:  isGiven,
@@ -301,7 +301,7 @@ func (fs *FeatureSuite) Given(title string, cb any) {
 func (fs *FeatureSuite) When(title string, cb any) {
 	fs.t.Helper()
 
-	fs.print(fmt.Sprintf("\t\tWhen: %s", title))
+	fs.print(fmt.Sprintf("\t\tWhen %s", title))
 
 	s := &featureStep{
 		kind:  isWhen,
@@ -320,7 +320,7 @@ func (fs *FeatureSuite) When(title string, cb any) {
 func (fs *FeatureSuite) Then(title string, cb any) {
 	fs.t.Helper()
 
-	fs.print(fmt.Sprintf("\t\tThen: %s", title))
+	fs.print(fmt.Sprintf("\t\tThen %s", title))
 
 	s := &featureStep{
 		kind:  isThen,

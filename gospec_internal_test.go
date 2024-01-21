@@ -273,7 +273,7 @@ func TestSingleDescribeWithSingleItBlock(t *testing.T) {
 	assert.Equal(t, "it 1", spec.suites[0][1].title)
 	assert.Equal(t, strings.Join([]string{
 		`describe 1`,
-		`	it 1`,
+		`	✔ it 1`,
 		``,
 		``,
 	}, "\n"), out.String())
@@ -307,8 +307,8 @@ func TestSingleDescribeWithTwoItBlocks(t *testing.T) {
 	assert.Equal(t, "it 2", spec.suites[1][1].title)
 	assert.Equal(t, strings.Join([]string{
 		`describe 1`,
-		`	it 1`,
-		`	it 2`,
+		`	✔ it 1`,
+		`	✔ it 2`,
 		``,
 		``,
 	}, "\n"), out.String())
@@ -358,12 +358,12 @@ func TestTwoDescribeBlocksWithTwoItBlocks(t *testing.T) {
 	assert.Equal(t, "it 4", spec.suites[3][1].title)
 	assert.Equal(t, strings.Join([]string{
 		`describe 1`,
-		`	it 1`,
-		`	it 2`,
+		`	✔ it 1`,
+		`	✔ it 2`,
 		``,
 		`describe 2`,
-		`	it 3`,
-		`	it 4`,
+		`	✔ it 3`,
+		`	✔ it 4`,
 		``,
 		``,
 	}, "\n"), out.String())
@@ -434,15 +434,15 @@ func TestTwoDescribeBlocksWithBothNestedDescribesAndItBlocks(t *testing.T) {
 	assert.Equal(t, "it 6", spec.suites[5][1].title)
 	assert.Equal(t, strings.Join([]string{
 		`describe 1`,
-		`	it 1`,
-		`	it 2`,
+		`	✔ it 1`,
+		`	✔ it 2`,
 		`	describe 2`,
-		`		it 3`,
-		`		it 4`,
+		`		✔ it 3`,
+		`		✔ it 4`,
 		``,
 		`describe 3`,
-		`	it 5`,
-		`	it 6`,
+		`	✔ it 5`,
+		`	✔ it 6`,
 		``,
 		``,
 	}, "\n"), out.String())
@@ -528,13 +528,13 @@ func TestSequentialExecution(t *testing.T) {
 	assert.Equal(t, strings.Join([]string{
 		`describe 1`,
 		`	describe 2`,
-		`		it 1`,
-		`		it 2`,
+		`		✔ it 1`,
+		`		✔ it 2`,
 		``,
 		`describe 3`,
 		`	describe 4`,
-		`		it 3`,
-		`		it 4`,
+		`		✔ it 3`,
+		`		✔ it 4`,
 		``,
 		``,
 	}, "\n"), out.String())
@@ -751,11 +751,11 @@ func TestSpecSuitesGetExecutedInParallel(t *testing.T) {
 			`			scenario 1`,
 			`				given 2`,
 			`					when 2`,
-			`						then 2`,
+			`						✔ then 2`,
 			`			scenario 2`,
 			`				given 2`,
 			`					when 2`,
-			`						then 2`,
+			`						✔ then 2`,
 			``,
 			`Checkout 2`,
 			`	given 11`,
@@ -763,11 +763,11 @@ func TestSpecSuitesGetExecutedInParallel(t *testing.T) {
 			`			scenario 11`,
 			`				given 12`,
 			`					when 12`,
-			`						then 12`,
+			`						✔ then 12`,
 			`			scenario 12`,
 			`				given 12`,
 			`					when 12`,
-			`						then 12`,
+			`						✔ then 12`,
 			``,
 			``,
 		}, "\n"), out.String())
