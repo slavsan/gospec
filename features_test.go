@@ -54,7 +54,7 @@ func TestFeaturesCanBeSetAtTopLevel(t *testing.T) {
 	var (
 		out     bytes.Buffer
 		tm      = &mock{t: nil}
-		fs      = NewFeatureSuite(nil, WithOutput(&out))
+		fs      = NewFeatureSuite(t, WithOutput(&out))
 		feature = fs.Feature
 	)
 
@@ -78,7 +78,7 @@ func TestFeaturesCanNotBeNested(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		fs          = NewFeatureSuite(nil, WithOutput(&out))
+		fs          = NewFeatureSuite(t, WithOutput(&out))
 		feature     = fs.Feature
 	)
 
@@ -97,7 +97,7 @@ func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		fs          = NewFeatureSuite(nil, WithOutput(&out))
+		fs          = NewFeatureSuite(t, WithOutput(&out))
 		feature     = fs.Feature
 		background  = fs.Background
 		scenario    = fs.Scenario
@@ -134,7 +134,7 @@ func TestScenariosCanNotBeNested(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(nil, WithOutput(&out))
+		spec        = NewFeatureSuite(t, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 	)
@@ -163,7 +163,7 @@ func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(nil, WithOutput(&out))
+		spec        = NewFeatureSuite(t, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 		given       = spec.Given
@@ -211,7 +211,7 @@ func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(nil, WithOutput(&out))
+		spec        = NewFeatureSuite(t, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 		given       = spec.Given
@@ -275,7 +275,7 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(nil, WithOutput(&out))
+		spec        = NewFeatureSuite(t, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 		background  = spec.Background
@@ -335,7 +335,7 @@ func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(nil, WithOutput(&out))
+		spec        = NewFeatureSuite(t, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 		background  = spec.Background
@@ -426,7 +426,7 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
 		mockAssert  = &assertMock{}
-		spec        = NewFeatureSuite(nil, WithOutput(&out))
+		spec        = NewFeatureSuite(t, WithOutput(&out))
 		feature, background, scenario,
 		given, when, then, table = spec.API()
 	)
@@ -581,7 +581,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
 		mockAssert  = &assertMock{}
-		spec        = NewFeatureSuite(nil, WithOutput(&out), WithParallel())
+		spec        = NewFeatureSuite(t, WithOutput(&out), WithParallel())
 		feature, background, scenario,
 		given, when, then, table = spec.API()
 	)
@@ -800,7 +800,7 @@ func TestTableOutput(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(nil, WithOutput(&out))
+		spec        = NewFeatureSuite(t, WithOutput(&out))
 		feature     = spec.Feature
 		scenario    = spec.Scenario
 		given       = spec.Given

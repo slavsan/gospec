@@ -49,6 +49,7 @@ type step struct {
 
 // NewTestSuite creates a new instance of Suite.
 func NewTestSuite(t *testing.T, options ...SuiteOption) *Suite {
+	t.Helper()
 	suite := &Suite{
 		t:        t,
 		out:      os.Stdout,

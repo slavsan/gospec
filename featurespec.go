@@ -56,6 +56,7 @@ type FeatureSuite struct {
 
 // NewFeatureSuite returns a new [FeatureSuite] instance.
 func NewFeatureSuite(t *testing.T, options ...SuiteOption) *FeatureSuite {
+	t.Helper()
 	fs := &FeatureSuite{
 		t:        t,
 		out:      os.Stdout,

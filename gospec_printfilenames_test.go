@@ -12,7 +12,7 @@ func TestSuiteWithPrintedFilenames(t *testing.T) {
 	var (
 		out      bytes.Buffer
 		tm       = &mock{t: t}
-		spec     = NewTestSuite(nil, WithOutput(&out), WithPrintedFilenames())
+		spec     = NewTestSuite(t, WithOutput(&out), WithPrintedFilenames())
 		describe = spec.Describe
 		it       = spec.It
 	)
@@ -67,7 +67,7 @@ func TestFeatureSuiteWithPrintedFilenames(t *testing.T) {
 	var (
 		out        bytes.Buffer
 		tm         = &mock{t: t}
-		spec       = NewFeatureSuite(nil, WithOutput(&out), WithPrintedFilenames())
+		spec       = NewFeatureSuite(t, WithOutput(&out), WithPrintedFilenames())
 		feature    = spec.Feature
 		scenario   = spec.Scenario
 		background = spec.Background
