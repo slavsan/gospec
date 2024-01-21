@@ -12,10 +12,12 @@ func TestSuiteWithPrintedFilenames(t *testing.T) {
 	var (
 		out      bytes.Buffer
 		tm       = &mock{t: t}
-		spec     = NewTestSuite(tm, WithOutput(&out), WithPrintedFilenames())
+		spec     = NewTestSuite(nil, WithOutput(&out), WithPrintedFilenames())
 		describe = spec.Describe
 		it       = spec.It
 	)
+
+	spec.t = tm
 
 	describe("describe 1", func() {
 		it("it 1", func() {})
@@ -49,13 +51,13 @@ func TestSuiteWithPrintedFilenames(t *testing.T) {
 	assert.Equal(t, "describe 2", spec.suites[3][0].title)
 	assert.Equal(t, "it 4", spec.suites[3][1].title)
 	assert.Equal(t, strings.Join([]string{
-		`describe 1	gospec_printfilenames_test.go:20`,
-		`	it 1	gospec_printfilenames_test.go:21`,
-		`	it 2	gospec_printfilenames_test.go:22`,
+		`describe 1	gospec_printfilenames_test.go:22`,
+		`	it 1	gospec_printfilenames_test.go:23`,
+		`	it 2	gospec_printfilenames_test.go:24`,
 		``,
-		`describe 2	gospec_printfilenames_test.go:25`,
-		`	it 3	gospec_printfilenames_test.go:26`,
-		`	it 4	gospec_printfilenames_test.go:27`,
+		`describe 2	gospec_printfilenames_test.go:27`,
+		`	it 3	gospec_printfilenames_test.go:28`,
+		`	it 4	gospec_printfilenames_test.go:29`,
 		``,
 		``,
 	}, "\n"), out.String())
@@ -65,7 +67,7 @@ func TestFeatureSuiteWithPrintedFilenames(t *testing.T) {
 	var (
 		out        bytes.Buffer
 		tm         = &mock{t: t}
-		spec       = NewFeatureSuite(tm, WithOutput(&out), WithPrintedFilenames())
+		spec       = NewFeatureSuite(nil, WithOutput(&out), WithPrintedFilenames())
 		feature    = spec.Feature
 		scenario   = spec.Scenario
 		background = spec.Background
@@ -73,6 +75,8 @@ func TestFeatureSuiteWithPrintedFilenames(t *testing.T) {
 		when       = spec.When
 		then       = spec.Then
 	)
+
+	spec.t = tm
 
 	feature("feature 1", func() {
 		background(func() {
@@ -124,26 +128,26 @@ func TestFeatureSuiteWithPrintedFilenames(t *testing.T) {
 	assert.Equal(t, "when 11", spec.suites[1][5].title)
 	assert.Equal(t, "then 11", spec.suites[1][6].title)
 	assert.Equal(t, strings.Join([]string{
-		`Feature: feature 1	gospec_printfilenames_test.go:77`,
+		`Feature: feature 1	gospec_printfilenames_test.go:81`,
 		``,
-		`	Background:	gospec_printfilenames_test.go:78`,
-		`		Given: given 1	gospec_printfilenames_test.go:79`,
-		`		Given: given 2	gospec_printfilenames_test.go:80`,
+		`	Background:	gospec_printfilenames_test.go:82`,
+		`		Given: given 1	gospec_printfilenames_test.go:83`,
+		`		Given: given 2	gospec_printfilenames_test.go:84`,
 		``,
-		`	Scenario: scenario 1	gospec_printfilenames_test.go:83`,
-		`		Given: given 3	gospec_printfilenames_test.go:84`,
-		`		When: when 1	gospec_printfilenames_test.go:85`,
-		`		Then: then 1	gospec_printfilenames_test.go:86`,
+		`	Scenario: scenario 1	gospec_printfilenames_test.go:87`,
+		`		Given: given 3	gospec_printfilenames_test.go:88`,
+		`		When: when 1	gospec_printfilenames_test.go:89`,
+		`		Then: then 1	gospec_printfilenames_test.go:90`,
 		``,
-		`Feature: feature 2	gospec_printfilenames_test.go:90`,
+		`Feature: feature 2	gospec_printfilenames_test.go:94`,
 		``,
-		`	Background:	gospec_printfilenames_test.go:91`,
-		`		Given: given 12	gospec_printfilenames_test.go:92`,
+		`	Background:	gospec_printfilenames_test.go:95`,
+		`		Given: given 12	gospec_printfilenames_test.go:96`,
 		``,
-		`	Scenario: scenario 11	gospec_printfilenames_test.go:95`,
-		`		Given: given 13	gospec_printfilenames_test.go:96`,
-		`		When: when 11	gospec_printfilenames_test.go:97`,
-		`		Then: then 11	gospec_printfilenames_test.go:98`,
+		`	Scenario: scenario 11	gospec_printfilenames_test.go:99`,
+		`		Given: given 13	gospec_printfilenames_test.go:100`,
+		`		When: when 11	gospec_printfilenames_test.go:101`,
+		`		Then: then 11	gospec_printfilenames_test.go:102`,
 		``,
 		``,
 	}, "\n"), out.String())

@@ -55,7 +55,7 @@ type FeatureSuite struct {
 }
 
 // NewFeatureSuite returns a new [FeatureSuite] instance.
-func NewFeatureSuite(t testingInterface, options ...SuiteOption) *FeatureSuite {
+func NewFeatureSuite(t *testing.T, options ...SuiteOption) *FeatureSuite {
 	fs := &FeatureSuite{
 		t:        t,
 		out:      os.Stdout,

@@ -15,9 +15,11 @@ func TestDescribesCanBeSetAtTopLevel(t *testing.T) {
 	var (
 		out      bytes.Buffer
 		tm       = &mock{t: t}
-		spec     = NewTestSuite(tm, WithOutput(&out))
+		spec     = NewTestSuite(nil, WithOutput(&out))
 		describe = spec.Describe
 	)
+
+	spec.t = tm
 
 	describe("describe 1", func() {})
 	describe("describe 2", func() {})
@@ -39,9 +41,11 @@ func TestDescribesCanBeNested(t *testing.T) {
 	var (
 		out      bytes.Buffer
 		tm       = &mock{t: t}
-		spec     = NewTestSuite(tm, WithOutput(&out))
+		spec     = NewTestSuite(nil, WithOutput(&out))
 		describe = spec.Describe
 	)
+
+	spec.t = tm
 
 	describe("Checkout", func() {
 		describe("nested describe", func() {
@@ -64,9 +68,11 @@ func TestTwoTopLevelDescribesWithTwoNestedDescribes(t *testing.T) {
 	var (
 		out      bytes.Buffer
 		tm       = &mock{t: t}
-		spec     = NewTestSuite(tm, WithOutput(&out))
+		spec     = NewTestSuite(nil, WithOutput(&out))
 		describe = spec.Describe
 	)
+
+	spec.t = tm
 
 	describe("describe 1", func() {
 		describe("nested 1", func() {})
@@ -99,9 +105,11 @@ func TestTwoTopLevelDescribesWithThreeLevelsNestedDescribes(t *testing.T) {
 	var (
 		out      bytes.Buffer
 		tm       = &mock{t: t}
-		spec     = NewTestSuite(tm, WithOutput(&out))
+		spec     = NewTestSuite(nil, WithOutput(&out))
 		describe = spec.Describe
 	)
+
+	spec.t = tm
 
 	describe("describe 1", func() {
 		describe("nested 1", func() {
@@ -136,9 +144,11 @@ func TestDescribesNestingComplexExample(t *testing.T) {
 	var (
 		out      bytes.Buffer
 		tm       = &mock{t: t}
-		spec     = NewTestSuite(tm, WithOutput(&out))
+		spec     = NewTestSuite(nil, WithOutput(&out))
 		describe = spec.Describe
 	)
+
+	spec.t = tm
 
 	describe("describe 1", func() {
 		describe("nested 1", func() {
@@ -203,10 +213,12 @@ func TestDescribesWithBeforeEach(t *testing.T) {
 	var (
 		out        bytes.Buffer
 		tm         = &mock{t: t}
-		spec       = NewTestSuite(tm, WithOutput(&out))
+		spec       = NewTestSuite(nil, WithOutput(&out))
 		describe   = spec.Describe
 		beforeEach = spec.BeforeEach
 	)
+
+	spec.t = tm
 
 	describe("describe 1", func() {
 		beforeEach(func() {})
@@ -241,10 +253,12 @@ func TestSingleDescribeWithSingleItBlock(t *testing.T) {
 	var (
 		out      bytes.Buffer
 		tm       = &mock{t: t}
-		spec     = NewTestSuite(tm, WithOutput(&out))
+		spec     = NewTestSuite(nil, WithOutput(&out))
 		describe = spec.Describe
 		it       = spec.It
 	)
+
+	spec.t = tm
 
 	describe("describe 1", func() {
 		it("it 1", func() {})
@@ -269,10 +283,12 @@ func TestSingleDescribeWithTwoItBlocks(t *testing.T) {
 	var (
 		out      bytes.Buffer
 		tm       = &mock{t: t}
-		spec     = NewTestSuite(tm, WithOutput(&out))
+		spec     = NewTestSuite(nil, WithOutput(&out))
 		describe = spec.Describe
 		it       = spec.It
 	)
+
+	spec.t = tm
 
 	describe("describe 1", func() {
 		it("it 1", func() {})
@@ -302,10 +318,12 @@ func TestTwoDescribeBlocksWithTwoItBlocks(t *testing.T) {
 	var (
 		out      bytes.Buffer
 		tm       = &mock{t: t}
-		spec     = NewTestSuite(tm, WithOutput(&out))
+		spec     = NewTestSuite(nil, WithOutput(&out))
 		describe = spec.Describe
 		it       = spec.It
 	)
+
+	spec.t = tm
 
 	describe("describe 1", func() {
 		it("it 1", func() {})
@@ -355,11 +373,13 @@ func TestTwoDescribeBlocksWithBothNestedDescribesAndItBlocks(t *testing.T) {
 	var (
 		out        bytes.Buffer
 		tm         = &mock{t: t}
-		spec       = NewTestSuite(tm, WithOutput(&out))
+		spec       = NewTestSuite(nil, WithOutput(&out))
 		describe   = spec.Describe
 		beforeEach = spec.BeforeEach
 		it         = spec.It
 	)
+
+	spec.t = tm
 
 	describe("describe 1", func() {
 		it("it 1", func() {})
@@ -433,11 +453,13 @@ func TestSequentialExecution(t *testing.T) {
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
 		mockAssert  = &assertMock{}
-		spec        = NewTestSuite(testingMock, WithOutput(&out))
+		spec        = NewTestSuite(nil, WithOutput(&out))
 		describe    = spec.Describe
 		beforeEach  = spec.BeforeEach
 		it          = spec.It
 	)
+
+	spec.t = testingMock
 
 	describe("describe 1", func() {
 		var nums []int
@@ -525,9 +547,11 @@ func TestSpecSuitesGetExecutedInParallel(t *testing.T) {
 		out                      bytes.Buffer
 		testingMock              = &mock{t: t}
 		mockAssert               = &assertMock{}
-		spec                     = NewTestSuite(testingMock, WithOutput(&out), WithParallel())
+		spec                     = NewTestSuite(nil, WithOutput(&out), WithParallel())
 		describe, beforeEach, it = spec.API()
 	)
+
+	spec.t = testingMock
 
 	var wg sync.WaitGroup
 	wg.Add(4)

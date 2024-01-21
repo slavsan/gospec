@@ -48,7 +48,7 @@ type step struct {
 }
 
 // NewTestSuite creates a new instance of Suite.
-func NewTestSuite(t testingInterface, options ...SuiteOption) *Suite {
+func NewTestSuite(t *testing.T, options ...SuiteOption) *Suite {
 	suite := &Suite{
 		t:        t,
 		out:      os.Stdout,
