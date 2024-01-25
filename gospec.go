@@ -2,11 +2,11 @@ package gospec
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -25,6 +25,12 @@ type Suite struct {
 	report         strings.Builder
 	basePath       string
 	printFilenames bool
+	nodes          []*node
+	currNode       *node
+	nodesStack     []*node
+	failedCount    int
+	calledDone     bool
+	wg             *sync.WaitGroup
 }
 
 type block int
@@ -41,10 +47,18 @@ var (
 )
 
 type step struct {
-	indent int
-	block  block
-	title  string
-	cb     any
+	t        *testing.T
+	indent   int
+	block    block
+	title    string
+	printed  bool
+	file     string
+	lineNo   int
+	failed   bool
+	failedAt int
+	executed bool
+	cb       any
+	done     func()
 }
 
 // NewTestSuite creates a new instance of Suite.
@@ -59,7 +73,48 @@ func NewTestSuite(t *testing.T, options ...SuiteOption) *Suite {
 	for _, o := range options {
 		o(suite)
 	}
+	if suite.parallel {
+		suite.wg = &sync.WaitGroup{}
+	}
 	return suite
+}
+
+func (suite *Suite) Start(onDone ...func()) {
+	if suite.parallel && len(onDone) > 1 {
+		suite.t.Errorf("invalid number of callbacks passed to start, expected 0 or 1, got %d", len(onDone))
+		return
+	}
+
+	// TODO: make sure start is not called twice
+	// TODO: detect start not called
+
+	if suite.calledDone {
+		panic("already calle done")
+	}
+
+	suite.calledDone = true
+
+	if !suite.parallel {
+		return
+	}
+
+	suite.wg.Add(len(suite.suites[suite.atSuiteIndex:]))
+
+	// TODO: add some default timeout perhaps and an option to override it ???
+	// TODO: start and wait for all of the tasks to finish
+
+	suite.start()
+
+	go func() {
+		suite.wg.Wait()
+
+		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
+		_, _ = suite.out.Write([]byte("\n"))
+
+		if len(onDone) > 0 {
+			onDone[0]()
+		}
+	}()
 }
 
 // API returns the exposed methods on the [Suite] instance. It's intended usage is as follows:
@@ -102,22 +157,52 @@ func (suite *Suite) API() (
 	func(string, any),
 	func(any),
 	func(string, any),
+	func(...func()),
 ) {
-	return suite.Describe, suite.BeforeEach, suite.It
+	return suite.Describe, suite.BeforeEach, suite.It, suite.Start
+}
+
+//func endsInItBlock(suite []*step) bool {
+//	if len(suite) == 0 {
+//		return false
+//	}
+//
+//	lastStep := suite[len(suite)-1]
+//
+//	return lastStep.block == isIt
+//}
+
+func (suite *Suite) foo() {
+	suite.wg.Add(len(suite.suites[suite.atSuiteIndex:]))
 }
 
 func (suite *Suite) start() {
 	for i := suite.atSuiteIndex; i < len(suite.suites); i++ {
 		suite2 := suite.suites[i]
 		suite.atSuiteIndex++
+
 		suite.t.Run(buildSuiteTitle(suite2), func(t *testing.T) {
-			t.Helper()
-			world := newWorld()
-			world.T = t
+			// TODO: check if the last step is an `it` block, and if not, skip this test
+
+			if suite.t.Failed() {
+				if suite.parallel {
+					suite.wg.Done()
+				}
+				t.Skip()
+			}
+
 			if suite.parallel {
+				world := newWorld()
+				world.T = t
+
 				t.Parallel()
 				for _, s := range suite2 {
 					if s.block == isIt || s.block == isBeforeEach {
+						if s.block == isIt {
+							s.done = func() {
+								suite.wg.Done()
+							}
+						}
 						s.cb.(func(w *World))(world)
 						continue
 					}
@@ -130,10 +215,18 @@ func (suite *Suite) start() {
 
 			for _, s := range suite2 {
 				if s.cb != nil {
+					if s.block == isIt || s.block == isBeforeEach {
+						s.t = t
+					}
 					s.cb.(func())()
 				}
 			}
 		})
+	}
+
+	if !suite.parallel {
+		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
+		_, _ = suite.out.Write([]byte("\n"))
 	}
 }
 
@@ -155,6 +248,11 @@ func (suite *Suite) pushStack(s *step) {
 	suite.stack = append(suite.stack, s)
 }
 
+func (suite *Suite) pushStack2(n *node) {
+	suite.t.Helper()
+	suite.nodesStack = append(suite.nodesStack, n)
+}
+
 func (suite *Suite) popStack(s *step) {
 	suite.t.Helper()
 	if len(suite.stack) == 0 {
@@ -169,6 +267,22 @@ func (suite *Suite) popStack(s *step) {
 	}
 
 	suite.stack = suite.stack[:len(suite.stack)-1]
+}
+
+func (suite *Suite) popStack2(n *node) {
+	suite.t.Helper()
+	if len(suite.nodesStack) == 0 {
+		suite.t.Errorf("unexpected empty node stack")
+		return
+	}
+
+	lastNode := suite.nodesStack[len(suite.nodesStack)-1]
+	if lastNode != n {
+		suite.t.Errorf("unexpected node")
+		return
+	}
+
+	suite.nodesStack = suite.nodesStack[:len(suite.nodesStack)-1]
 }
 
 func (suite *Suite) popStackUntilStep(s *step) {
@@ -191,6 +305,26 @@ func (suite *Suite) popStackUntilStep(s *step) {
 	suite.stack = suite.stack[:index+1]
 }
 
+func (suite *Suite) popStackUntilStep2(n *node) {
+	suite.t.Helper()
+	if len(suite.nodesStack) == 0 {
+		suite.t.Errorf("unexpected empty node stack")
+		return
+	}
+
+	index := suite.findIndexOfNode(n)
+	if index < 0 {
+		return
+	}
+
+	if index+1 > len(suite.nodesStack) {
+		suite.t.Errorf("out of bound index for node search")
+		return
+	}
+
+	suite.nodesStack = suite.nodesStack[:index+1]
+}
+
 func (suite *Suite) findIndexOfStep(s *step) int {
 	suite.t.Helper()
 	if len(suite.stack) == 0 {
@@ -206,22 +340,24 @@ func (suite *Suite) findIndexOfStep(s *step) int {
 	return -1
 }
 
-func (suite *Suite) print(title string) {
-	pc, file, lineNo, ok := runtime.Caller(2)
-	_ = pc
-	_ = file
-	_ = lineNo
-	_ = ok
-
-	if !suite.printFilenames {
-		suite.report.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat("\t", suite.indent), title))
-		return
+func (suite *Suite) findIndexOfNode(n *node) int {
+	suite.t.Helper()
+	if len(suite.nodesStack) == 0 {
+		return -1
 	}
 
-	suite.report.WriteString(fmt.Sprintf("%s%s\t%s:%d\n",
-		strings.Repeat("\t", suite.indent), title,
-		strings.TrimPrefix(file, suite.basePath), lineNo,
-	))
+	for i := len(suite.nodesStack) - 1; i >= 0; i-- {
+		if suite.nodesStack[i] == n {
+			return i
+		}
+	}
+
+	return -1
+}
+
+type node struct {
+	step     *step
+	children []*node
 }
 
 // Describe is a function which describes a feature or contextual logical
@@ -240,12 +376,25 @@ func (suite *Suite) Describe(title string, cb any) {
 
 	// TODO: add checks for order of blocks
 
-	if suite.indent == 0 {
-		// starting with a new top-level describe, so create a new router
-		suite.report = strings.Builder{}
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	n := &node{
+		// ..
 	}
 
-	suite.print(title)
+	if suite.isTopLevel() {
+		// starting with a new top-level describe, so create a new router
+		suite.report = strings.Builder{}
+
+		// top level, so the node should go at the suites level
+		suite.nodes = append(suite.nodes, n)
+	} else {
+		suite.currNode.children = append(suite.currNode.children, n)
+	}
+
+	suite.currNode = n
 
 	suite.indent++
 
@@ -253,22 +402,61 @@ func (suite *Suite) Describe(title string, cb any) {
 		title:  title,
 		indent: suite.indent,
 		block:  isDescribe,
+		file:   file,
+		lineNo: lineNo,
 	}
 
+	n.step = s
+
 	suite.pushStack(s)
+	suite.pushStack2(n)
 
 	cb.(func())()
 
 	suite.indent--
+
+	// TODO: check if last suite starts with the same describe we have
+	// TODO: check whether the last suite contains this step
+	if len(suite.stack) > 0 && !suite.lastSuiteContainsStep(s) {
+		suite.copyStack()
+	}
+
 	suite.popStackUntilStep(s)
 	suite.popStack(s)
 
-	// closing top-level describe, therefore write the output
-	if suite.indent == 0 {
-		suite.start()
-		suite.report.WriteString("\n")
-		_, _ = suite.out.Write([]byte(suite.report.String()))
+	suite.popStackUntilStep2(n)
+	suite.popStack2(n)
+
+	if len(suite.nodesStack) >= 1 {
+		suite.currNode = suite.nodesStack[len(suite.nodesStack)-1]
 	}
+
+	// closing top-level describe, therefore write the output
+	if suite.isTopLevel() {
+		suite.currNode = nil
+		if !suite.parallel {
+			suite.start()
+		}
+	}
+}
+
+func (suite *Suite) isTopLevel() bool {
+	return suite.indent == 0
+}
+
+func (suite *Suite) lastSuiteContainsStep(step *step) bool {
+	if len(suite.suites) == 0 {
+		return false
+	}
+
+	lastSuite := suite.suites[len(suite.suites)-1]
+	for _, s := range lastSuite {
+		if s == step {
+			return true
+		}
+	}
+
+	return false
 }
 
 // BeforeEach is a function which executes before each [Suite.It] or [Suite.Describe]
@@ -294,15 +482,56 @@ func (suite *Suite) BeforeEach(cb any) {
 func (suite *Suite) It(title string, cb any) {
 	suite.t.Helper()
 
-	suite.print(fmt.Sprintf("✔ %s", title))
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
 
 	// TODO: check if parallel and make sure `cb` is defined with *World as the first arg
+
+	n := &node{
+		// ..
+	}
 
 	s := &step{
 		title:  title,
 		indent: suite.indent,
 		block:  isIt,
-		cb:     cb,
+		file:   file,
+		lineNo: lineNo,
+		cb:     nil,
+	}
+
+	n.step = s
+
+	suite.currNode.children = append(suite.currNode.children, n)
+
+	if suite.parallel {
+		s.cb = func(w *World) {
+			w.T.Helper()
+
+			defer s.done()
+
+			cb.(func(*World))(w)
+			s.executed = true
+
+			if w.T.Failed() {
+				s.failed = true
+				suite.failedCount++
+				s.failedAt = suite.failedCount
+			}
+		}
+	} else {
+		s.cb = func() {
+			suite.t.Helper()
+			cb.(func())()
+			s.executed = true
+
+			if suite.t.Failed() {
+				s.failed = true
+				suite.failedCount++
+				s.failedAt = suite.failedCount
+			}
+		}
 	}
 
 	suite.pushStack(s)

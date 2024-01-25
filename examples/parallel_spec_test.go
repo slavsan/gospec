@@ -8,7 +8,9 @@ import (
 )
 
 func TestSpecSuiteInParallelExample(t *testing.T) {
-	describe, beforeEach, it := gospec.NewTestSuite(t, gospec.WithParallel()).API()
+	describe, beforeEach, it, start := gospec.NewTestSuite(t, gospec.WithParallel()).API()
+
+	defer start()
 
 	describe("Cart", func() {
 		beforeEach(func(w *gospec.World) {

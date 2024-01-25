@@ -10,7 +10,7 @@ import (
 
 // ExampleTestSuite shows an example gospec.Suite.
 func Example_suite() {
-	describe, beforeEach, it := gospec.NewTestSuite(t).API()
+	describe, beforeEach, it, _ := gospec.NewTestSuite(t).API()
 
 	describe("Cart", func() {
 		var cart []string

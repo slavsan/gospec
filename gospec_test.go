@@ -108,8 +108,12 @@ func TestDescribe(t *testing.T) {
 			it("should have empty stack", func() {
 				assert.Equal(t, 0, len(s2.stack))
 			})
-			it("should have 0 suites", func() {
-				assert.Equal(t, 0, len(s2.suites))
+			it("should have 2 suites", func() {
+				assert.Equal(t, 2, len(s2.suites))
+				assert.Equal(t, 1, len(s2.suites[0]))
+				assert.Equal(t, "describe", buildSuiteTitle(s2.suites[0]))
+				assert.Equal(t, 1, len(s2.suites[1]))
+				assert.Equal(t, "sibling describe", buildSuiteTitle(s2.suites[1]))
 			})
 		})
 		context("with two describes, one parent and one child", func() {
@@ -127,8 +131,10 @@ func TestDescribe(t *testing.T) {
 			it("should have empty stack", func() {
 				assert.Equal(t, 0, len(s2.stack))
 			})
-			it("should have 0 suites", func() {
-				assert.Equal(t, 0, len(s2.suites))
+			it("should have 1 suite", func() {
+				assert.Equal(t, 1, len(s2.suites))
+				assert.Equal(t, 2, len(s2.suites[0]))
+				assert.Equal(t, "parent describe/child describe", buildSuiteTitle(s2.suites[0]))
 			})
 		})
 		context("with three nested describes", func() {
@@ -148,8 +154,10 @@ func TestDescribe(t *testing.T) {
 			it("should have empty stack", func() {
 				assert.Equal(t, 0, len(s2.stack))
 			})
-			it("should have 0 suites", func() {
-				assert.Equal(t, 0, len(s2.suites))
+			it("should have 1 suites", func() {
+				assert.Equal(t, 1, len(s2.suites))
+				assert.Equal(t, 3, len(s2.suites[0]))
+				assert.Equal(t, "top most describe/nested describe/most nested describe", buildSuiteTitle(s2.suites[0]))
 			})
 		})
 	})
@@ -295,13 +303,15 @@ func TestIt(t *testing.T) { //nolint:maintidx
 				assert.Equal(t, 0, len(s2.stack))
 			})
 			it("should have 4 suites with just 2 steps defined in each", func() {
-				assert.Equal(t, 3, len(s2.suites))
+				assert.Equal(t, 4, len(s2.suites))
 				assert.Equal(t, 2, len(s2.suites[0]))
 				assert.Equal(t, "testing describe/first it", buildSuiteTitle(s2.suites[0]))
 				assert.Equal(t, 2, len(s2.suites[1]))
 				assert.Equal(t, "testing describe/second it", buildSuiteTitle(s2.suites[1]))
 				assert.Equal(t, 3, len(s2.suites[2]))
 				assert.Equal(t, "testing describe/testing nested context/third it", buildSuiteTitle(s2.suites[2]))
+				assert.Equal(t, 3, len(s2.suites[3]))
+				assert.Equal(t, "testing describe/testing nested context/testing nested empty context", buildSuiteTitle(s2.suites[3]))
 			})
 		})
 		context("with an even more complex example", func() {
@@ -373,17 +383,21 @@ func TestIt(t *testing.T) { //nolint:maintidx
 				assert.Equal(t, 0, len(s2.stack))
 			})
 			it("should have 4 suites with just 2 steps defined in each", func() {
-				assert.Equal(t, 5, len(s2.suites))
+				assert.Equal(t, 7, len(s2.suites))
 				assert.Equal(t, 4, len(s2.suites[0]))
 				assert.Equal(t, "Checkout/when shopping cart has 1 item/should have 1 item in the cart", buildSuiteTitle(s2.suites[0]))
 				assert.Equal(t, 4, len(s2.suites[1]))
 				assert.Equal(t, "Checkout/when shopping cart has 1 item/should have no coupon applied by default", buildSuiteTitle(s2.suites[1]))
 				assert.Equal(t, 6, len(s2.suites[2]))
 				assert.Equal(t, "Checkout/when shopping cart has 1 item/when we add one more item to the cart/should have 2 items in the cart", buildSuiteTitle(s2.suites[2]))
-				assert.Equal(t, 3, len(s2.suites[3]))
-				assert.Equal(t, "Checkout/when shopping cart is empty/should have 0 items", buildSuiteTitle(s2.suites[3]))
-				assert.Equal(t, 4, len(s2.suites[4]))
-				assert.Equal(t, "Sign Up/when the user signs up/should be signed up", buildSuiteTitle(s2.suites[4]))
+				assert.Equal(t, 8, len(s2.suites[3]))
+				assert.Equal(t, "Checkout/when shopping cart has 1 item/when we add one more item to the cart/when the coupon is eligible for this purchase/and the coupon gets applied/but the coupon value is higher than the purchase value", buildSuiteTitle(s2.suites[3]))
+				assert.Equal(t, 10, len(s2.suites[4]))
+				assert.Equal(t, "Checkout/when shopping cart has 1 item/when we add one more item to the cart/when the coupon is eligible for this purchase/and the coupon gets applied/and the coupon value is less than the purchase value/when completing the purchase", buildSuiteTitle(s2.suites[4]))
+				assert.Equal(t, 3, len(s2.suites[5]))
+				assert.Equal(t, "Checkout/when shopping cart is empty/should have 0 items", buildSuiteTitle(s2.suites[5]))
+				assert.Equal(t, 4, len(s2.suites[6]))
+				assert.Equal(t, "Sign Up/when the user signs up/should be signed up", buildSuiteTitle(s2.suites[6]))
 			})
 		})
 

@@ -11,45 +11,6 @@ import (
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
 
-type mock struct {
-	t          *testing.T
-	calls      [][]any
-	testTitles []string
-}
-
-func (m *mock) Helper() {
-	// ..
-}
-
-func (m *mock) Parallel() {
-	// ..
-}
-
-func (m *mock) Errorf(format string, args ...interface{}) {
-	var call []any
-	call = append(call, format)
-	call = append(call, args...)
-	m.calls = append(m.calls, call)
-}
-
-func (m *mock) Run(name string, f func(t *testing.T)) bool {
-	m.testTitles = append(m.testTitles, name)
-	m.t.Run(name, f)
-	return false
-}
-
-type assertMock struct {
-	mu    sync.Mutex
-	calls [][]any
-}
-
-func (m *assertMock) Assert(args ...any) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.calls = append(m.calls, args)
-	// ..
-}
-
 func TestFeaturesCanBeSetAtTopLevel(t *testing.T) {
 	var (
 		out     bytes.Buffer
