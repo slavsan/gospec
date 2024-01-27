@@ -10,7 +10,7 @@ type SuiteOption func(suiteInterface SuiteInterface)
 // and is used by the available [SuiteOption] implementations.
 type SuiteInterface interface {
 	setOutput(out io.Writer)
-	setParallel()
+	setParallel(done func())
 	setPrintFilenames()
 }
 
@@ -33,9 +33,9 @@ func WithOutput(w io.Writer) SuiteOption {
 //
 // One important requirement for using this option is to also use the [World] instance which gets passed to each
 // block's function, at least the ones that are supposed to execute code.
-func WithParallel() SuiteOption {
+func WithParallel(done func()) SuiteOption {
 	return func(suite SuiteInterface) {
-		suite.setParallel()
+		suite.setParallel(done)
 	}
 }
 

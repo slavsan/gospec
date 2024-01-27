@@ -542,7 +542,8 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
 		mockAssert  = &assertMock{}
-		spec        = NewFeatureSuite(t, WithOutput(&out), WithParallel())
+		done        = make(chan bool, 1)
+		spec        = NewFeatureSuite(t, WithOutput(&out), WithParallel(func() { close(done) }))
 		feature, background, scenario,
 		given, when, then, table = spec.API()
 	)
@@ -554,8 +555,6 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 
 	_ = background
 	_ = table
-
-	done := make(chan bool, 1)
 
 	t.Run("run parallel tests", func(t *testing.T) {
 		feature("Checkout 1", func() {
@@ -680,7 +679,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 
 		go func() {
 			wg.Wait()
-			done <- true
+			close(done) // TODO: remove this when the API gets updated
 		}()
 
 		select {

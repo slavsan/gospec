@@ -10,24 +10,29 @@ import (
 
 func TestSuiteWithPrintedFilenames(t *testing.T) {
 	var (
-		out      bytes.Buffer
-		tm       = &mock{t: t}
-		spec     = NewTestSuite(t, WithOutput(&out), WithPrintedFilenames())
-		describe = spec.Describe
-		it       = spec.It
+		out  bytes.Buffer
+		spec *Suite
+		tm   = &mock{t: t}
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			s.t = tm
 
-	describe("describe 1", func() {
-		it("it 1", func() {})
-		it("it 2", func() {})
-	})
+			describe, _, it := s.With(WithOutput(&out), WithPrintedFilenames()).API()
 
-	describe("describe 2", func() {
-		it("it 3", func() {})
-		it("it 4", func() {})
-	})
+			describe("describe 1", func() {
+				it("it 1", func() {})
+				it("it 2", func() {})
+			})
+
+			describe("describe 2", func() {
+				it("it 3", func() {})
+				it("it 4", func() {})
+			})
+		})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{
@@ -51,13 +56,13 @@ func TestSuiteWithPrintedFilenames(t *testing.T) {
 	assert.Equal(t, "describe 2", spec.suites[3][0].title)
 	assert.Equal(t, "it 4", spec.suites[3][1].title)
 	assert.Equal(t, strings.Join([]string{
-		`describe 1	gospec_printfilenames_test.go:22`,
-		`	✔ it 1	gospec_printfilenames_test.go:23`,
-		`	✔ it 2	gospec_printfilenames_test.go:24`,
+		`describe 1	gospec_printfilenames_test.go:25`,
+		`	✔ it 1	gospec_printfilenames_test.go:26`,
+		`	✔ it 2	gospec_printfilenames_test.go:27`,
 		``,
-		`describe 2	gospec_printfilenames_test.go:27`,
-		`	✔ it 3	gospec_printfilenames_test.go:28`,
-		`	✔ it 4	gospec_printfilenames_test.go:29`,
+		`describe 2	gospec_printfilenames_test.go:30`,
+		`	✔ it 3	gospec_printfilenames_test.go:31`,
+		`	✔ it 4	gospec_printfilenames_test.go:32`,
 		``,
 		``,
 	}, "\n"), out.String())
@@ -128,26 +133,26 @@ func TestFeatureSuiteWithPrintedFilenames(t *testing.T) {
 	assert.Equal(t, "when 11", spec.suites[1][5].title)
 	assert.Equal(t, "then 11", spec.suites[1][6].title)
 	assert.Equal(t, strings.Join([]string{
-		`Feature: feature 1	gospec_printfilenames_test.go:81`,
+		`Feature: feature 1	gospec_printfilenames_test.go:86`,
 		``,
-		`	Background:	gospec_printfilenames_test.go:82`,
-		`		Given given 1	gospec_printfilenames_test.go:83`,
-		`		Given given 2	gospec_printfilenames_test.go:84`,
+		`	Background:	gospec_printfilenames_test.go:87`,
+		`		Given given 1	gospec_printfilenames_test.go:88`,
+		`		Given given 2	gospec_printfilenames_test.go:89`,
 		``,
-		`	Scenario: scenario 1	gospec_printfilenames_test.go:87`,
-		`		Given given 3	gospec_printfilenames_test.go:88`,
-		`		When when 1	gospec_printfilenames_test.go:89`,
-		`		Then then 1	gospec_printfilenames_test.go:90`,
+		`	Scenario: scenario 1	gospec_printfilenames_test.go:92`,
+		`		Given given 3	gospec_printfilenames_test.go:93`,
+		`		When when 1	gospec_printfilenames_test.go:94`,
+		`		Then then 1	gospec_printfilenames_test.go:95`,
 		``,
-		`Feature: feature 2	gospec_printfilenames_test.go:94`,
+		`Feature: feature 2	gospec_printfilenames_test.go:99`,
 		``,
-		`	Background:	gospec_printfilenames_test.go:95`,
-		`		Given given 12	gospec_printfilenames_test.go:96`,
+		`	Background:	gospec_printfilenames_test.go:100`,
+		`		Given given 12	gospec_printfilenames_test.go:101`,
 		``,
-		`	Scenario: scenario 11	gospec_printfilenames_test.go:99`,
-		`		Given given 13	gospec_printfilenames_test.go:100`,
-		`		When when 11	gospec_printfilenames_test.go:101`,
-		`		Then then 11	gospec_printfilenames_test.go:102`,
+		`	Scenario: scenario 11	gospec_printfilenames_test.go:104`,
+		`		Given given 13	gospec_printfilenames_test.go:105`,
+		`		When when 11	gospec_printfilenames_test.go:106`,
+		`		Then then 11	gospec_printfilenames_test.go:107`,
 		``,
 		``,
 	}, "\n"), out.String())

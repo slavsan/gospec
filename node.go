@@ -11,6 +11,7 @@ func (t tree) String(suite *Suite) string {
 	var sb strings.Builder
 	for _, n := range t {
 		n.write(&sb, 0, suite)
+		sb.WriteString("\n")
 	}
 	return sb.String()
 }

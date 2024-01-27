@@ -17,6 +17,7 @@ import (
 type Suite struct {
 	t              testingInterface
 	parallel       bool
+	done           func()
 	stack          []*step
 	suites         [][]*step
 	indent         int
@@ -31,6 +32,21 @@ type Suite struct {
 	failedCount    int
 	calledDone     bool
 	wg             *sync.WaitGroup
+}
+
+func TestSuite(t *testing.T, f func(s *Suite)) {
+	s := newTestSuite(t)
+
+	defer s.Start()
+
+	f(s)
+}
+
+func (suite *Suite) With(options ...SuiteOption) *Suite {
+	for _, o := range options {
+		o(suite)
+	}
+	return suite
 }
 
 type block int
@@ -62,7 +78,7 @@ type step struct {
 }
 
 // NewTestSuite creates a new instance of Suite.
-func NewTestSuite(t *testing.T, options ...SuiteOption) *Suite {
+func newTestSuite(t *testing.T, options ...SuiteOption) *Suite {
 	t.Helper()
 	suite := &Suite{
 		t:        t,
@@ -94,10 +110,7 @@ func (suite *Suite) Start(onDone ...func()) {
 
 	suite.calledDone = true
 
-	if !suite.parallel {
-		return
-	}
-
+	suite.wg = &sync.WaitGroup{}
 	suite.wg.Add(len(suite.suites[suite.atSuiteIndex:]))
 
 	// TODO: add some default timeout perhaps and an option to override it ???
@@ -105,14 +118,21 @@ func (suite *Suite) Start(onDone ...func()) {
 
 	suite.start()
 
+	if !suite.parallel {
+		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
+		return
+	}
+
 	go func() {
 		suite.wg.Wait()
 
 		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
-		_, _ = suite.out.Write([]byte("\n"))
 
 		if len(onDone) > 0 {
-			onDone[0]()
+			//onDone[0]()
+		}
+		if suite.done != nil {
+			suite.done()
 		}
 	}()
 }
@@ -157,9 +177,8 @@ func (suite *Suite) API() (
 	func(string, any),
 	func(any),
 	func(string, any),
-	func(...func()),
 ) {
-	return suite.Describe, suite.BeforeEach, suite.It, suite.Start
+	return suite.Describe, suite.BeforeEach, suite.It
 }
 
 //func endsInItBlock(suite []*step) bool {
@@ -222,11 +241,6 @@ func (suite *Suite) start() {
 				}
 			}
 		})
-	}
-
-	if !suite.parallel {
-		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
-		_, _ = suite.out.Write([]byte("\n"))
 	}
 }
 
@@ -434,9 +448,6 @@ func (suite *Suite) Describe(title string, cb any) {
 	// closing top-level describe, therefore write the output
 	if suite.isTopLevel() {
 		suite.currNode = nil
-		if !suite.parallel {
-			suite.start()
-		}
 	}
 }
 
@@ -562,8 +573,9 @@ func (suite *Suite) setPrintFilenames() {
 	suite.printFilenames = true
 }
 
-func (suite *Suite) setParallel() {
+func (suite *Suite) setParallel(done func()) {
 	suite.parallel = true
+	suite.done = done
 }
 
 func getBasePath() string {

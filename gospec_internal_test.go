@@ -12,16 +12,21 @@ import (
 
 func TestDescribesCanBeSetAtTopLevel(t *testing.T) {
 	var (
-		out      bytes.Buffer
-		tm       = &mock{t: t}
-		spec     = NewTestSuite(t, WithOutput(&out))
-		describe = spec.Describe
+		out  bytes.Buffer
+		tm   = &mock{t: t}
+		spec *Suite
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			s.t = tm
+			describe, _, _ := s.With(WithOutput(&out)).API()
 
-	describe("describe 1", func() {})
-	describe("describe 2", func() {})
+			describe("describe 1", func() {})
+			describe("describe 2", func() {})
+		})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{"describe 1", "describe 2"}, tm.testTitles)
@@ -38,18 +43,23 @@ func TestDescribesCanBeSetAtTopLevel(t *testing.T) {
 
 func TestDescribesCanBeNested(t *testing.T) {
 	var (
-		out      bytes.Buffer
-		tm       = &mock{t: t}
-		spec     = NewTestSuite(t, WithOutput(&out))
-		describe = spec.Describe
+		out  bytes.Buffer
+		tm   = &mock{t: t}
+		spec *Suite
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			spec.t = tm
+			describe, _, _ := s.With(WithOutput(&out)).API()
 
-	describe("Checkout", func() {
-		describe("nested describe", func() {
+			describe("Checkout", func() {
+				describe("nested describe", func() {
+				})
+			})
 		})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{"Checkout/nested describe"}, tm.testTitles)
@@ -65,23 +75,28 @@ func TestDescribesCanBeNested(t *testing.T) {
 
 func TestTwoTopLevelDescribesWithTwoNestedDescribes(t *testing.T) {
 	var (
-		out      bytes.Buffer
-		tm       = &mock{t: t}
-		spec     = NewTestSuite(t, WithOutput(&out))
-		describe = spec.Describe
+		out  bytes.Buffer
+		tm   = &mock{t: t}
+		spec *Suite
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			s.t = tm
+			describe, _, _ := s.With(WithOutput(&out)).API()
 
-	describe("describe 1", func() {
-		describe("nested 1", func() {})
-		describe("nested 2", func() {})
-	})
+			describe("describe 1", func() {
+				describe("nested 1", func() {})
+				describe("nested 2", func() {})
+			})
 
-	describe("describe 2", func() {
-		describe("nested 3", func() {})
-		describe("nested 4", func() {})
-	})
+			describe("describe 2", func() {
+				describe("nested 3", func() {})
+				describe("nested 4", func() {})
+			})
+		})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{
@@ -107,25 +122,30 @@ func TestTwoTopLevelDescribesWithTwoNestedDescribes(t *testing.T) {
 
 func TestTwoTopLevelDescribesWithThreeLevelsNestedDescribes(t *testing.T) {
 	var (
-		out      bytes.Buffer
-		tm       = &mock{t: t}
-		spec     = NewTestSuite(t, WithOutput(&out))
-		describe = spec.Describe
+		out  bytes.Buffer
+		tm   = &mock{t: t}
+		spec *Suite
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			s.t = tm
+			describe, _, _ := s.With(WithOutput(&out)).API()
 
-	describe("describe 1", func() {
-		describe("nested 1", func() {
-			describe("nested 2", func() {})
-		})
-	})
+			describe("describe 1", func() {
+				describe("nested 1", func() {
+					describe("nested 2", func() {})
+				})
+			})
 
-	describe("describe 2", func() {
-		describe("nested 3", func() {
-			describe("nested 4", func() {})
+			describe("describe 2", func() {
+				describe("nested 3", func() {
+					describe("nested 4", func() {})
+				})
+			})
 		})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{
@@ -149,42 +169,47 @@ func TestTwoTopLevelDescribesWithThreeLevelsNestedDescribes(t *testing.T) {
 
 func TestDescribesNestingComplexExample(t *testing.T) {
 	var (
-		out      bytes.Buffer
-		tm       = &mock{t: t}
-		spec     = NewTestSuite(t, WithOutput(&out))
-		describe = spec.Describe
+		out  bytes.Buffer
+		spec *Suite
+		tm   = &mock{t: t}
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			s.t = tm
+			describe, _, _ := s.With(WithOutput(&out)).API()
 
-	describe("describe 1", func() {
-		describe("nested 1", func() {
-			describe("nested 2", func() {})
-			describe("nested 3", func() {
-				describe("nested 4", func() {})
-				describe("nested 5", func() {
-					describe("nested 6", func() {})
+			describe("describe 1", func() {
+				describe("nested 1", func() {
+					describe("nested 2", func() {})
+					describe("nested 3", func() {
+						describe("nested 4", func() {})
+						describe("nested 5", func() {
+							describe("nested 6", func() {})
+						})
+					})
+					describe("nested 7", func() {})
+					describe("nested 8", func() {})
 				})
 			})
-			describe("nested 7", func() {})
-			describe("nested 8", func() {})
-		})
-	})
 
-	describe("describe 9", func() {
-		describe("nested 10", func() {
-			describe("nested 11", func() {})
-		})
-		describe("nested 12", func() {})
-		describe("nested 13", func() {})
-		describe("nested 14", func() {
-			describe("nested 15", func() {
-				describe("nested 16", func() {})
+			describe("describe 9", func() {
+				describe("nested 10", func() {
+					describe("nested 11", func() {})
+				})
+				describe("nested 12", func() {})
+				describe("nested 13", func() {})
+				describe("nested 14", func() {
+					describe("nested 15", func() {
+						describe("nested 16", func() {})
+					})
+					describe("nested 17", func() {})
+				})
+				describe("nested 18", func() {})
 			})
-			describe("nested 17", func() {})
 		})
-		describe("nested 18", func() {})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{
@@ -230,26 +255,30 @@ func TestDescribesNestingComplexExample(t *testing.T) {
 
 func TestDescribesWithBeforeEach(t *testing.T) {
 	var (
-		out        bytes.Buffer
-		tm         = &mock{t: t}
-		spec       = NewTestSuite(t, WithOutput(&out))
-		describe   = spec.Describe
-		beforeEach = spec.BeforeEach
+		out  bytes.Buffer
+		tm   = &mock{t: t}
+		spec *Suite
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			s.t = tm
+			describe, beforeEach, _ := s.With(WithOutput(&out)).API()
 
-	describe("describe 1", func() {
-		beforeEach(func() {})
-		describe("nested 1", func() {})
-		describe("nested 2", func() {})
-	})
+			describe("describe 1", func() {
+				beforeEach(func() {})
+				describe("nested 1", func() {})
+				describe("nested 2", func() {})
+			})
 
-	describe("describe 2", func() {
-		beforeEach(func() {})
-		describe("nested 3", func() {})
-		describe("nested 4", func() {})
-	})
+			describe("describe 2", func() {
+				beforeEach(func() {})
+				describe("nested 3", func() {})
+				describe("nested 4", func() {})
+			})
+		})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{
@@ -275,18 +304,22 @@ func TestDescribesWithBeforeEach(t *testing.T) {
 
 func TestSingleDescribeWithSingleItBlock(t *testing.T) {
 	var (
-		out      bytes.Buffer
-		tm       = &mock{t: t}
-		spec     = NewTestSuite(t, WithOutput(&out))
-		describe = spec.Describe
-		it       = spec.It
+		out  bytes.Buffer
+		spec *Suite
+		tm   = &mock{t: t}
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			s.t = tm
+			describe, _, it := s.With(WithOutput(&out)).API()
 
-	describe("describe 1", func() {
-		it("it 1", func() {})
-	})
+			describe("describe 1", func() {
+				it("it 1", func() {})
+			})
+		})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{"describe 1/it 1"}, tm.testTitles)
@@ -305,19 +338,23 @@ func TestSingleDescribeWithSingleItBlock(t *testing.T) {
 
 func TestSingleDescribeWithTwoItBlocks(t *testing.T) {
 	var (
-		out      bytes.Buffer
-		tm       = &mock{t: t}
-		spec     = NewTestSuite(t, WithOutput(&out))
-		describe = spec.Describe
-		it       = spec.It
+		out  bytes.Buffer
+		spec *Suite
+		tm   = &mock{t: t}
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			s.t = tm
+			describe, _, it := s.With(WithOutput(&out)).API()
 
-	describe("describe 1", func() {
-		it("it 1", func() {})
-		it("it 2", func() {})
-	})
+			describe("describe 1", func() {
+				it("it 1", func() {})
+				it("it 2", func() {})
+			})
+		})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{"describe 1/it 1", "describe 1/it 2"}, tm.testTitles)
@@ -340,24 +377,28 @@ func TestSingleDescribeWithTwoItBlocks(t *testing.T) {
 
 func TestTwoDescribeBlocksWithTwoItBlocks(t *testing.T) {
 	var (
-		out      bytes.Buffer
-		tm       = &mock{t: t}
-		spec     = NewTestSuite(t, WithOutput(&out))
-		describe = spec.Describe
-		it       = spec.It
+		out  bytes.Buffer
+		spec *Suite
+		tm   = &mock{t: t}
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			s.t = tm
+			describe, _, it := s.With(WithOutput(&out)).API()
 
-	describe("describe 1", func() {
-		it("it 1", func() {})
-		it("it 2", func() {})
-	})
+			describe("describe 1", func() {
+				it("it 1", func() {})
+				it("it 2", func() {})
+			})
 
-	describe("describe 2", func() {
-		it("it 3", func() {})
-		it("it 4", func() {})
-	})
+			describe("describe 2", func() {
+				it("it 3", func() {})
+				it("it 4", func() {})
+			})
+		})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{
@@ -395,31 +436,34 @@ func TestTwoDescribeBlocksWithTwoItBlocks(t *testing.T) {
 
 func TestTwoDescribeBlocksWithBothNestedDescribesAndItBlocks(t *testing.T) {
 	var (
-		out        bytes.Buffer
-		tm         = &mock{t: t}
-		spec       = NewTestSuite(t, WithOutput(&out))
-		describe   = spec.Describe
-		beforeEach = spec.BeforeEach
-		it         = spec.It
+		out  bytes.Buffer
+		spec *Suite
+		tm   = &mock{t: t}
 	)
 
-	spec.t = tm
+	func() {
+		TestSuite(t, func(s *Suite) {
+			spec = s
+			s.t = tm
+			describe, beforeEach, it := s.With(WithOutput(&out)).API()
 
-	describe("describe 1", func() {
-		it("it 1", func() {})
-		it("it 2", func() {})
+			describe("describe 1", func() {
+				it("it 1", func() {})
+				it("it 2", func() {})
 
-		describe("describe 2", func() {
-			beforeEach(func() {})
-			it("it 3", func() {})
-			it("it 4", func() {})
+				describe("describe 2", func() {
+					beforeEach(func() {})
+					it("it 3", func() {})
+					it("it 4", func() {})
+				})
+			})
+
+			describe("describe 3", func() {
+				it("it 5", func() {})
+				it("it 6", func() {})
+			})
 		})
-	})
-
-	describe("describe 3", func() {
-		it("it 5", func() {})
-		it("it 6", func() {})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{
@@ -477,63 +521,64 @@ func TestSequentialExecution(t *testing.T) {
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
 		mockAssert  = &assertMock{}
-		spec        = NewTestSuite(t, WithOutput(&out))
-		describe    = spec.Describe
-		beforeEach  = spec.BeforeEach
-		it          = spec.It
 	)
 
-	spec.t = testingMock
+	func() {
+		TestSuite(t, func(s *Suite) {
+			s.t = testingMock
+			describe, beforeEach, it := s.With(WithOutput(&out)).API()
 
-	describe("describe 1", func() {
-		var nums []int
+			describe("describe 1", func() {
+				var nums []int
 
-		beforeEach(func() {
-			nums = []int{}
-			nums = append(nums, 1)
+				beforeEach(func() {
+					nums = []int{}
+					nums = append(nums, 1)
+				})
+
+				describe("describe 2", func() {
+					beforeEach(func() {
+						nums = append(nums, 2)
+					})
+
+					it("it 1", func() {
+						nums = append(nums, 3)
+						mockAssert.Assert(nums)
+					})
+
+					it("it 2", func() {
+						nums = append(nums, 4)
+						mockAssert.Assert(nums)
+					})
+				})
+			})
+
+			describe("describe 3", func() {
+				var nums []int
+
+				beforeEach(func() {
+					nums = []int{}
+					nums = append(nums, 11)
+				})
+
+				describe("describe 4", func() {
+					beforeEach(func() {
+						nums = append(nums, 12)
+					})
+
+					it("it 3", func() {
+						nums = append(nums, 13)
+						mockAssert.Assert(nums)
+					})
+
+					it("it 4", func() {
+						nums = append(nums, 14)
+						mockAssert.Assert(nums)
+					})
+				})
+			})
 		})
-
-		describe("describe 2", func() {
-			beforeEach(func() {
-				nums = append(nums, 2)
-			})
-
-			it("it 1", func() {
-				nums = append(nums, 3)
-				mockAssert.Assert(nums)
-			})
-
-			it("it 2", func() {
-				nums = append(nums, 4)
-				mockAssert.Assert(nums)
-			})
-		})
-	})
-
-	describe("describe 3", func() {
-		var nums []int
-
-		beforeEach(func() {
-			nums = []int{}
-			nums = append(nums, 11)
-		})
-
-		describe("describe 4", func() {
-			beforeEach(func() {
-				nums = append(nums, 12)
-			})
-
-			it("it 3", func() {
-				nums = append(nums, 13)
-				mockAssert.Assert(nums)
-			})
-
-			it("it 4", func() {
-				nums = append(nums, 14)
-				mockAssert.Assert(nums)
-			})
-		})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), testingMock.calls)
 	assert.Equal(t, 4, len(mockAssert.calls))
@@ -571,148 +616,145 @@ func TestSpecSuitesGetExecutedInParallel(t *testing.T) {
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
 		mockAssert  = &assertMock{}
-		spec        = NewTestSuite(t, WithOutput(&out), WithParallel())
 		done        = make(chan bool, 1)
 	)
 
-	spec.t = testingMock
-	describe, beforeEach, it, start := spec.API()
-
 	t.Run("run parallel tests", func(t *testing.T) {
-		defer start(func() {
-			close(done)
-		})
+		TestSuite(t, func(s *Suite) {
+			s.t = testingMock
+			describe, beforeEach, it := s.With(WithOutput(&out), WithParallel(func() { close(done) })).API()
 
-		describe("Checkout 1", func() {
-			describe("given 1", func() {
-				beforeEach(func(w *World) {
-					w.Set("nums", []int{1})
-				})
-
-				describe("when 1", func() {
+			describe("Checkout 1", func() {
+				describe("given 1", func() {
 					beforeEach(func(w *World) {
-						w.Swap("nums", func(current any) any {
-							return append(current.([]int), 2)
-						})
-						w.Swap("nums", func(current any) any {
-							return append(current.([]int), 3)
-						})
+						w.Set("nums", []int{1})
 					})
 
-					describe("scenario 1", func() {
-						describe("given 2", func() {
-							beforeEach(func(w *World) {
-								w.Swap("nums", func(current any) any {
-									return append(current.([]int), 4)
-								})
+					describe("when 1", func() {
+						beforeEach(func(w *World) {
+							w.Swap("nums", func(current any) any {
+								return append(current.([]int), 2)
 							})
+							w.Swap("nums", func(current any) any {
+								return append(current.([]int), 3)
+							})
+						})
 
-							describe("when 2", func() {
+						describe("scenario 1", func() {
+							describe("given 2", func() {
 								beforeEach(func(w *World) {
 									w.Swap("nums", func(current any) any {
-										return append(current.([]int), 5)
+										return append(current.([]int), 4)
 									})
 								})
 
-								it("then 2", func(w *World) {
-									w.Swap("nums", func(current any) any {
-										return append(current.([]int), 6)
+								describe("when 2", func() {
+									beforeEach(func(w *World) {
+										w.Swap("nums", func(current any) any {
+											return append(current.([]int), 5)
+										})
 									})
-									mockAssert.Assert(w.Get("nums"))
+
+									it("then 2", func(w *World) {
+										w.Swap("nums", func(current any) any {
+											return append(current.([]int), 6)
+										})
+										mockAssert.Assert(w.Get("nums"))
+									})
 								})
 							})
 						})
-					})
 
-					describe("scenario 2", func() {
-						describe("given 2", func() {
-							beforeEach(func(w *World) {
-								w.Swap("nums", func(current any) any {
-									return append(current.([]int), 7)
-								})
-							})
-
-							describe("when 2", func() {
+						describe("scenario 2", func() {
+							describe("given 2", func() {
 								beforeEach(func(w *World) {
 									w.Swap("nums", func(current any) any {
-										return append(current.([]int), 8)
+										return append(current.([]int), 7)
 									})
 								})
 
-								it("then 2", func(w *World) {
-									w.Swap("nums", func(current any) any {
-										return append(current.([]int), 9)
+								describe("when 2", func() {
+									beforeEach(func(w *World) {
+										w.Swap("nums", func(current any) any {
+											return append(current.([]int), 8)
+										})
 									})
-									mockAssert.Assert(w.Get("nums"))
+
+									it("then 2", func(w *World) {
+										w.Swap("nums", func(current any) any {
+											return append(current.([]int), 9)
+										})
+										mockAssert.Assert(w.Get("nums"))
+									})
 								})
 							})
 						})
 					})
 				})
 			})
-		})
 
-		describe("Checkout 2", func() {
-			describe("given 11", func() {
-				beforeEach(func(w *World) {
-					w.Set("nums", []int{11})
-				})
-
-				describe("when 11", func() {
+			describe("Checkout 2", func() {
+				describe("given 11", func() {
 					beforeEach(func(w *World) {
-						w.Swap("nums", func(current any) any {
-							return append(current.([]int), 12)
-						})
-						w.Swap("nums", func(current any) any {
-							return append(current.([]int), 13)
-						})
+						w.Set("nums", []int{11})
 					})
 
-					describe("scenario 11", func() {
-						describe("given 12", func() {
-							beforeEach(func(w *World) {
-								w.Swap("nums", func(current any) any {
-									return append(current.([]int), 14)
-								})
+					describe("when 11", func() {
+						beforeEach(func(w *World) {
+							w.Swap("nums", func(current any) any {
+								return append(current.([]int), 12)
 							})
+							w.Swap("nums", func(current any) any {
+								return append(current.([]int), 13)
+							})
+						})
 
-							describe("when 12", func() {
+						describe("scenario 11", func() {
+							describe("given 12", func() {
 								beforeEach(func(w *World) {
 									w.Swap("nums", func(current any) any {
-										return append(current.([]int), 15)
+										return append(current.([]int), 14)
 									})
 								})
 
-								it("then 12", func(w *World) {
-									w.Swap("nums", func(current any) any {
-										return append(current.([]int), 16)
+								describe("when 12", func() {
+									beforeEach(func(w *World) {
+										w.Swap("nums", func(current any) any {
+											return append(current.([]int), 15)
+										})
 									})
-									mockAssert.Assert(w.Get("nums"))
+
+									it("then 12", func(w *World) {
+										w.Swap("nums", func(current any) any {
+											return append(current.([]int), 16)
+										})
+										mockAssert.Assert(w.Get("nums"))
+									})
 								})
 							})
 						})
-					})
 
-					describe("scenario 12", func() {
-						describe("given 12", func() {
-							beforeEach(func(w *World) {
-								w.Swap("nums", func(current any) any {
-									return append(current.([]int), 17)
-								})
-							})
-
-							describe("when 12", func() {
+						describe("scenario 12", func() {
+							describe("given 12", func() {
 								beforeEach(func(w *World) {
 									w.Swap("nums", func(current any) any {
-										return append(current.([]int), 18)
+										return append(current.([]int), 17)
 									})
 								})
 
-								it("then 12", func(w *World) {
-									w.Swap("nums", func(current any) any {
-										return append(current.([]int), 19)
+								describe("when 12", func() {
+									beforeEach(func(w *World) {
+										w.Swap("nums", func(current any) any {
+											return append(current.([]int), 18)
+										})
 									})
-									mockAssert.Assert(w.Get("nums"))
+
+									it("then 12", func(w *World) {
+										w.Swap("nums", func(current any) any {
+											return append(current.([]int), 19)
+										})
+										mockAssert.Assert(w.Get("nums"))
+									})
 								})
 							})
 						})
@@ -771,7 +813,7 @@ func TestSpecSuitesGetExecutedInParallel(t *testing.T) {
 			`				given 2`,
 			`					when 2`,
 			`						✔ then 2`,
-			//``, // TODO: fix this missing newline
+			``,
 			`Checkout 2`,
 			`	given 11`,
 			`		when 11`,

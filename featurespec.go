@@ -43,6 +43,7 @@ type featureStep struct {
 type FeatureSuite struct {
 	t               testingInterface
 	parallel        bool
+	done            func()
 	stack           []*featureStep
 	backgroundStack []*featureStep
 	suites          [][]*featureStep
@@ -490,6 +491,7 @@ func (fs *FeatureSuite) setPrintFilenames() {
 	fs.printFilenames = true
 }
 
-func (fs *FeatureSuite) setParallel() {
+func (fs *FeatureSuite) setParallel(done func()) {
 	fs.parallel = true
+	fs.done = done
 }
