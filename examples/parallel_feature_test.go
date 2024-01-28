@@ -10,7 +10,7 @@ import (
 func TestFeatureInParallelExample(t *testing.T) {
 	t.Parallel()
 
-	gospec.FeatureSuite2(t, func(s *gospec.FeatureSuite) {
+	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
 		feature, background, scenario, given, when, then, _ :=
 			s.With(gospec.WithParallel(func() {})).API()
 

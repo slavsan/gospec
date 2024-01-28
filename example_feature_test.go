@@ -10,7 +10,7 @@ import (
 
 // ExampleFeatureSuite shows an example gospec.FeatureSuite.
 func Example_featureSuite() {
-	gospec.FeatureSuite2(t, func(s *gospec.FeatureSuite) {
+	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
 		feature, background, scenario, given, when, then, _ :=
 			s.With(gospec.WithPrintedFilenames()).API()
 

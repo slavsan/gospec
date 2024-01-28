@@ -25,6 +25,14 @@ const (
 	isTable
 )
 
+type Feature func(title string, cb any)
+type Background func(any)
+type Scenario func(title string, cb any)
+type Given func(title string, cb any)
+type When func(title string, cb any)
+type Then func(title string, cb any)
+type Table func(items any, columns ...string)
+
 type featureStep struct {
 	t        *testing.T
 	kind     featureStepKind
@@ -117,16 +125,16 @@ func newFeatureSuite(t *testing.T, options ...SuiteOption) *FeatureSuite {
 //
 // ..
 func (fs *FeatureSuite) API() (
-	func(string, any),
-	func(any),
-	func(string, any),
-	func(string, any),
-	func(string, any),
-	func(string, any),
-	func(items any, columns ...string),
+	Feature,
+	Background,
+	Scenario,
+	Given,
+	When,
+	Then,
+	Table,
 ) {
-	return fs.Feature, fs.Background, fs.Scenario, fs.Given,
-		fs.When, fs.Then, fs.Table
+	return fs.feature, fs.background, fs.scenario, fs.given,
+		fs.when, fs.then, fs.table
 }
 
 func (fs *FeatureSuite) prevKind() featureStepKind {
@@ -137,7 +145,7 @@ func (fs *FeatureSuite) prevKind() featureStepKind {
 	return fs.stack[len(fs.stack)-1].kind
 }
 
-func FeatureSuite2(t *testing.T, f func(fs *FeatureSuite)) {
+func WithFeatureSuite(t *testing.T, f func(fs *FeatureSuite)) {
 	fs := newFeatureSuite(t)
 
 	defer fs.start()
@@ -147,7 +155,7 @@ func FeatureSuite2(t *testing.T, f func(fs *FeatureSuite)) {
 
 // Feature defines a feature block, this is the top-level block and should
 // define a separate piece of functionality.
-func (fs *FeatureSuite) Feature(title string, cb any) {
+func (fs *FeatureSuite) feature(title string, cb any) {
 	fs.report = strings.Builder{}
 	fs.t.Helper()
 	if fs.prevKind() != isUndefined {
@@ -295,7 +303,7 @@ func (fs *FeatureSuite) findIndexOfStep(s *featureStep) int {
 
 // Background defines a block which would get executed before each [FeatureSuite.Scenario].
 // It can contain multiple [FeatureSuite.Given] steps.
-func (fs *FeatureSuite) Background(cb any) {
+func (fs *FeatureSuite) background(cb any) {
 	fs.t.Helper()
 	if fs.prevKind() != isFeature {
 		fs.t.Errorf("invalid position for `Background` function, it must be inside a `Feature` call")
@@ -373,7 +381,7 @@ func (fs *FeatureSuite) findIndexOfNode(n *node2) int {
 
 // Scenario defines a scenario block. It should test a particular feature in a particular
 // scenario, provided a set of given/when/then steps.
-func (fs *FeatureSuite) Scenario(title string, cb any) {
+func (fs *FeatureSuite) scenario(title string, cb any) {
 	fs.t.Helper()
 	if fs.prevKind() != isFeature && fs.prevKind() != isBackground {
 		fs.invalid = true
@@ -420,7 +428,7 @@ func (fs *FeatureSuite) Scenario(title string, cb any) {
 // Given defines a block which is meant to build the prerequisites for a particular
 // test. It's usual to have any test setup logic defined in a [FeatureSuite.Given]
 // block.
-func (fs *FeatureSuite) Given(title string, cb any) {
+func (fs *FeatureSuite) given(title string, cb any) {
 	fs.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -479,7 +487,7 @@ func (fs *FeatureSuite) Given(title string, cb any) {
 }
 
 // When defines a block which should exercise the actual test.
-func (fs *FeatureSuite) When(title string, cb any) {
+func (fs *FeatureSuite) when(title string, cb any) {
 	fs.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -509,7 +517,7 @@ func (fs *FeatureSuite) When(title string, cb any) {
 }
 
 // Then defines a block which should hold a set of assertions.
-func (fs *FeatureSuite) Then(title string, cb any) {
+func (fs *FeatureSuite) then(title string, cb any) {
 	fs.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -554,7 +562,7 @@ func (fs *FeatureSuite) copyStack() {
 }
 
 // Table is a utility function to only visualize test data in a table.
-func (fs *FeatureSuite) Table(items any, columns ...string) { //nolint:gocognit,cyclop
+func (fs *FeatureSuite) table(items any, columns ...string) { //nolint:gocognit,cyclop
 	fs.t.Helper()
 
 	// TODO: detect when using in "parallel" context, and if yes, error. Should use the `World.Table` method in such cases.

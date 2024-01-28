@@ -8,7 +8,7 @@ import (
 )
 
 func TestSimpleSpec(t *testing.T) {
-	gospec.TestSuite(t, func(s *gospec.Suite) {
+	gospec.WithSpecSuite(t, func(s *gospec.Suite) {
 		describe, beforeEach, it := s.API()
 
 		describe("Cart", func() {

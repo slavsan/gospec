@@ -8,7 +8,7 @@ import (
 )
 
 func TestSimpleFeatureExample(t *testing.T) {
-	gospec.FeatureSuite2(t, func(s *gospec.FeatureSuite) {
+	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
 		feature, background, scenario, given, when, then, _ :=
 			s.With(gospec.WithPrintedFilenames()).API()
 

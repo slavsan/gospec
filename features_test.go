@@ -17,7 +17,7 @@ func TestFeaturesCanBeSetAtTopLevel(t *testing.T) {
 	)
 
 	func() {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = tm
 			feature, _, _, _, _, _, _ := s.With(WithOutput(&out)).API()
 
@@ -44,7 +44,7 @@ func TestFeaturesCanNotBeNested(t *testing.T) {
 	)
 
 	func() {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = testingMock
 			feature, _, _, _, _, _, _ := s.With(WithOutput(&out)).API()
 
@@ -66,7 +66,7 @@ func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 	)
 
 	func() {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = testingMock
 			feature, background, scenario, _, _, _, _ := s.With(WithOutput(&out)).API()
 
@@ -104,7 +104,7 @@ func TestScenariosCanNotBeNested(t *testing.T) {
 	)
 
 	func() {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = testingMock
 			feature, _, scenario, _, _, _, _ := s.With(WithOutput(&out)).API()
 
@@ -130,7 +130,7 @@ func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 	)
 
 	func() {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = testingMock
 			feature, _, scenario, given, when, then, _ := s.With(WithOutput(&out)).API()
@@ -179,7 +179,7 @@ func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 	)
 
 	func() {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = testingMock
 			feature, _, scenario, given, when, then, _ := s.With(WithOutput(&out)).API()
@@ -244,7 +244,7 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 	)
 
 	func() {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = testingMock
 			feature, background, scenario, given, when, then, _ := s.With(WithOutput(&out)).API()
@@ -304,7 +304,7 @@ func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 	)
 
 	func() {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = testingMock
 			feature, background, scenario, given, when, then, _ := s.With(WithOutput(&out)).API()
@@ -394,7 +394,7 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 	)
 
 	func() {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = testingMock
 			feature, background, scenario, given, when, then, table := s.With(WithOutput(&out)).API()
 			_ = table
@@ -551,7 +551,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 	)
 
 	t.Run("run parallel tests", func(t *testing.T) {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = testingMock
 			feature, background, scenario,
 				given, when, then, _ := s.With(WithOutput(&out), WithParallel(func() { close(done) })).API()
@@ -755,7 +755,7 @@ func TestTableOutput(t *testing.T) {
 	)
 
 	func() {
-		FeatureSuite2(t, func(s *FeatureSuite) {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = testingMock
 			feature, _, scenario, given, when, then, table := s.With(WithOutput(&out)).API()

@@ -10,6 +10,10 @@ import (
 	"testing"
 )
 
+type Describe func(title string, cb any)
+type BeforeEach func(cb any)
+type It func(title string, cb any)
+
 // Suite is a spec suite which follows the rspec syntax, i.e.
 // describe, beforeEach, it blocks, etc. It has several methods
 // that can be called on it: [Suite.Describe], [Suite.BeforeEach],
@@ -33,10 +37,10 @@ type Suite struct {
 	wg             *sync.WaitGroup
 }
 
-func TestSuite(t *testing.T, f func(s *Suite)) {
+func WithSpecSuite(t *testing.T, f func(s *Suite)) {
 	s := newTestSuite(t)
 
-	defer s.Start()
+	defer s.start2()
 
 	f(s)
 }
@@ -94,7 +98,7 @@ func newTestSuite(t *testing.T, options ...SuiteOption) *Suite {
 	return suite
 }
 
-func (suite *Suite) Start(onDone ...func()) {
+func (suite *Suite) start2(onDone ...func()) {
 	if suite.parallel && len(onDone) > 1 {
 		suite.t.Errorf("invalid number of callbacks passed to start, expected 0 or 1, got %d", len(onDone))
 		return
@@ -173,11 +177,11 @@ func (suite *Suite) Start(onDone ...func()) {
 //		// ..
 //	})
 func (suite *Suite) API() (
-	func(string, any),
-	func(any),
-	func(string, any),
+	Describe,
+	BeforeEach,
+	It,
 ) {
-	return suite.Describe, suite.BeforeEach, suite.It
+	return suite.describe, suite.beforeEach, suite.it
 }
 
 //func endsInItBlock(suite []*step) bool {
@@ -379,7 +383,7 @@ func (suite *Suite) findIndexOfNode(n *node) int {
 // expected or advised since it would lead to undefined behaviour or race conditions.
 // In those cases, just use the [World] construct which would get passed to
 // all [Suite.BeforeEach] and [Suite.It] function calls.
-func (suite *Suite) Describe(title string, cb any) {
+func (suite *Suite) describe(title string, cb any) {
 	suite.t.Helper()
 
 	// TODO: add checks for order of blocks
@@ -470,7 +474,7 @@ func (suite *Suite) lastSuiteContainsStep(step *step) bool {
 // It is used for assigning values to variables which are then used in the following
 // blocks. If the [Suite.BeforeEach] block is not followed by a [Suite.It] block, it
 // will not get executed.
-func (suite *Suite) BeforeEach(cb any) {
+func (suite *Suite) beforeEach(cb any) {
 	suite.t.Helper()
 
 	s := &step{
@@ -484,7 +488,7 @@ func (suite *Suite) BeforeEach(cb any) {
 
 // It defines a block which gets executed in a test suite as the last step. [Suite.It] blocks
 // can not be nested.
-func (suite *Suite) It(title string, cb any) {
+func (suite *Suite) it(title string, cb any) {
 	suite.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
