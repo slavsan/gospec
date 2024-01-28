@@ -5,12 +5,12 @@
 //
 // Both of those approaches can fit better in different scenarios or depending on the personal preference of the
 // user. Parallel execution of tests is supported but requires usage of the [World] construct and enabling the
-// [WithParallel] option.
+// [Parallel] option.
 //
 // Supported options are:
-//   - specifying a custom output writer via the [WithOutput] option.
-//   - parallel tests execution using the [WithParallel] option.
-//   - print filepath:line in the test output via the [WithPrintedFilenames] option.
+//   - specifying a custom output writer via the [Output] option.
+//   - parallel tests execution using the [Parallel] option.
+//   - print filepath:line in the test output via the [PrintedFilenames] option.
 //
 // Opposite to the Gherkin-first approach used in Cucumber tests, gospec follows the
 // code-first approach which then generates Gherkin looking output.

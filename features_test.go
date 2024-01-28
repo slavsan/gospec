@@ -19,7 +19,7 @@ func TestFeaturesCanBeSetAtTopLevel(t *testing.T) {
 	func() {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = tm
-			feature, _, _, _, _, _, _ := s.With(WithOutput(&out)).API()
+			feature, _, _, _, _, _, _ := s.With(Output(&out)).API()
 
 			feature("feature 1", func() {})
 			feature("feature 2", func() {})
@@ -46,7 +46,7 @@ func TestFeaturesCanNotBeNested(t *testing.T) {
 	func() {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = testingMock
-			feature, _, _, _, _, _, _ := s.With(WithOutput(&out)).API()
+			feature, _, _, _, _, _, _ := s.With(Output(&out)).API()
 
 			feature("Checkout", func() {
 				feature("nested feature", func() {
@@ -68,7 +68,7 @@ func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 	func() {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = testingMock
-			feature, background, scenario, _, _, _, _ := s.With(WithOutput(&out)).API()
+			feature, background, scenario, _, _, _, _ := s.With(Output(&out)).API()
 
 			feature("Checkout", func() {
 				background(func() {})
@@ -106,7 +106,7 @@ func TestScenariosCanNotBeNested(t *testing.T) {
 	func() {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = testingMock
-			feature, _, scenario, _, _, _, _ := s.With(WithOutput(&out)).API()
+			feature, _, scenario, _, _, _, _ := s.With(Output(&out)).API()
 
 			feature("Checkout", func() {
 				scenario("scenario 1", func() {
@@ -133,7 +133,7 @@ func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = testingMock
-			feature, _, scenario, given, when, then, _ := s.With(WithOutput(&out)).API()
+			feature, _, scenario, given, when, then, _ := s.With(Output(&out)).API()
 
 			feature("Checkout", func() {
 				scenario("scenario 1", func() {
@@ -182,7 +182,7 @@ func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = testingMock
-			feature, _, scenario, given, when, then, _ := s.With(WithOutput(&out)).API()
+			feature, _, scenario, given, when, then, _ := s.With(Output(&out)).API()
 
 			feature("Checkout", func() {
 				scenario("scenario 1", func() {
@@ -247,7 +247,7 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = testingMock
-			feature, background, scenario, given, when, then, _ := s.With(WithOutput(&out)).API()
+			feature, background, scenario, given, when, then, _ := s.With(Output(&out)).API()
 
 			feature("Checkout", func() {
 				background(func() {
@@ -307,7 +307,7 @@ func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = testingMock
-			feature, background, scenario, given, when, then, _ := s.With(WithOutput(&out)).API()
+			feature, background, scenario, given, when, then, _ := s.With(Output(&out)).API()
 
 			feature("Checkout", func() {
 				background(func() {
@@ -396,7 +396,7 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 	func() {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = testingMock
-			feature, background, scenario, given, when, then, table := s.With(WithOutput(&out)).API()
+			feature, background, scenario, given, when, then, table := s.With(Output(&out)).API()
 			_ = table
 
 			feature("Checkout 1", func() {
@@ -554,7 +554,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			s.t = testingMock
 			feature, background, scenario,
-				given, when, then, _ := s.With(WithOutput(&out), WithParallel(func() { close(done) })).API()
+				given, when, then, _ := s.With(Output(&out), Parallel(func() { close(done) })).API()
 
 			feature("Checkout 1", func() {
 				background(func() {
@@ -758,7 +758,7 @@ func TestTableOutput(t *testing.T) {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = testingMock
-			feature, _, scenario, given, when, then, table := s.With(WithOutput(&out)).API()
+			feature, _, scenario, given, when, then, table := s.With(Output(&out)).API()
 
 			feature("Checkout", func() {
 				type Product struct {

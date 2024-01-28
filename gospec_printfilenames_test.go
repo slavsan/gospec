@@ -20,7 +20,7 @@ func TestSuiteWithPrintedFilenames(t *testing.T) {
 			spec = s
 			s.t = tm
 
-			describe, _, it := s.With(WithOutput(&out), WithPrintedFilenames()).API()
+			describe, _, it := s.With(Output(&out), PrintedFilenames()).API()
 
 			describe("describe 1", func() {
 				it("it 1", func() {})
@@ -79,7 +79,7 @@ func TestFeatureSuiteWithPrintedFilenames(t *testing.T) {
 		WithFeatureSuite(t, func(s *FeatureSuite) {
 			spec = s
 			s.t = tm
-			feature, background, scenario, given, when, then, _ := s.With(WithOutput(&out), WithPrintedFilenames()).API()
+			feature, background, scenario, given, when, then, _ := s.With(Output(&out), PrintedFilenames()).API()
 
 			feature("feature 1", func() {
 				background(func() {

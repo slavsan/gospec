@@ -21,7 +21,7 @@ func TestDescribesCanBeSetAtTopLevel(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			s.t = tm
-			describe, _, _ := s.With(WithOutput(&out)).API()
+			describe, _, _ := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {})
 			describe("describe 2", func() {})
@@ -52,7 +52,7 @@ func TestDescribesCanBeNested(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			spec.t = tm
-			describe, _, _ := s.With(WithOutput(&out)).API()
+			describe, _, _ := s.With(Output(&out)).API()
 
 			describe("Checkout", func() {
 				describe("nested describe", func() {
@@ -84,7 +84,7 @@ func TestTwoTopLevelDescribesWithTwoNestedDescribes(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			s.t = tm
-			describe, _, _ := s.With(WithOutput(&out)).API()
+			describe, _, _ := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
 				describe("nested 1", func() {})
@@ -131,7 +131,7 @@ func TestTwoTopLevelDescribesWithThreeLevelsNestedDescribes(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			s.t = tm
-			describe, _, _ := s.With(WithOutput(&out)).API()
+			describe, _, _ := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
 				describe("nested 1", func() {
@@ -178,7 +178,7 @@ func TestDescribesNestingComplexExample(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			s.t = tm
-			describe, _, _ := s.With(WithOutput(&out)).API()
+			describe, _, _ := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
 				describe("nested 1", func() {
@@ -264,7 +264,7 @@ func TestDescribesWithBeforeEach(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			s.t = tm
-			describe, beforeEach, _ := s.With(WithOutput(&out)).API()
+			describe, beforeEach, _ := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
 				beforeEach(func() {})
@@ -313,7 +313,7 @@ func TestSingleDescribeWithSingleItBlock(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			s.t = tm
-			describe, _, it := s.With(WithOutput(&out)).API()
+			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
 				it("it 1", func() {})
@@ -347,7 +347,7 @@ func TestSingleDescribeWithTwoItBlocks(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			s.t = tm
-			describe, _, it := s.With(WithOutput(&out)).API()
+			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
 				it("it 1", func() {})
@@ -386,7 +386,7 @@ func TestTwoDescribeBlocksWithTwoItBlocks(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			s.t = tm
-			describe, _, it := s.With(WithOutput(&out)).API()
+			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
 				it("it 1", func() {})
@@ -445,7 +445,7 @@ func TestTwoDescribeBlocksWithBothNestedDescribesAndItBlocks(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			s.t = tm
-			describe, beforeEach, it := s.With(WithOutput(&out)).API()
+			describe, beforeEach, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
 				it("it 1", func() {})
@@ -526,7 +526,7 @@ func TestSequentialExecution(t *testing.T) {
 	func() {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			s.t = testingMock
-			describe, beforeEach, it := s.With(WithOutput(&out)).API()
+			describe, beforeEach, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
 				var nums []int
@@ -622,7 +622,7 @@ func TestSpecSuitesGetExecutedInParallel(t *testing.T) {
 	t.Run("run parallel tests", func(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			s.t = testingMock
-			describe, beforeEach, it := s.With(WithOutput(&out), WithParallel(func() { close(done) })).API()
+			describe, beforeEach, it := s.With(Output(&out), Parallel(func() { close(done) })).API()
 
 			describe("Checkout 1", func() {
 				describe("given 1", func() {

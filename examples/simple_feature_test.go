@@ -10,7 +10,7 @@ import (
 func TestSimpleFeatureExample(t *testing.T) {
 	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
 		feature, background, scenario, given, when, then, _ :=
-			s.With(gospec.WithPrintedFilenames()).API()
+			s.With(gospec.PrintedFilenames()).API()
 
 		feature("Cart", func() {
 			var cart []string

@@ -379,7 +379,7 @@ func (suite *SpecSuite) findIndexOfNode(n *node) int {
 // The expected usage is for variables to be defined in a Describe block but
 // not initialized or assigned there.
 //
-// When the [WithParallel] is used, even declaring variables in Describe is not
+// When the [Parallel] is used, even declaring variables in Describe is not
 // expected or advised since it would lead to undefined behaviour or race conditions.
 // In those cases, just use the [World] construct which would get passed to
 // all [SpecSuite.BeforeEach] and [SpecSuite.It] function calls.

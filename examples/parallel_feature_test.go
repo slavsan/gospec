@@ -12,7 +12,7 @@ func TestFeatureInParallelExample(t *testing.T) {
 
 	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
 		feature, background, scenario, given, when, then, _ :=
-			s.With(gospec.WithParallel(func() {})).API()
+			s.With(gospec.Parallel(func() {})).API()
 
 		feature("Cart", func() {
 			background(func() {
