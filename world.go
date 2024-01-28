@@ -1,6 +1,10 @@
 package gospec
 
 import (
+	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -9,15 +13,110 @@ import (
 // in parallel tests. Changes to the contents of World are
 // concurrently safe to make.
 type World struct {
-	T      *testing.T
-	values map[string]any
-	mu     sync.Mutex
+	T                  *testing.T
+	values             map[string]any
+	mu                 sync.Mutex
+	currentFeatureStep *featureStep
 }
 
 func newWorld() *World {
 	return &World{
-		values: map[string]any{},
+		currentFeatureStep: nil,
+		values:             map[string]any{},
 	}
+}
+
+func (w *World) Table(items any, columns ...string) {
+	w.T.Helper()
+
+	// TODO: validate table was called in valid call site
+
+	var sb strings.Builder
+	n := &node2{
+		// ..
+	}
+
+	items2 := reflect.ValueOf(items)
+
+	if items2.Kind() != reflect.Slice {
+		w.T.Errorf("expected items to be of type slice but was of type: %v", reflect.TypeOf(items))
+		return
+	}
+
+	columnWidths := make(map[string]int, items2.Len())
+	_ = columnWidths
+
+	for _, x := range columns {
+		columnWidths[x] = len(x)
+	}
+
+	var rows []map[string]string
+
+	for i := 0; i < items2.Len(); i++ {
+		item := items2.Index(i)
+		if item.Kind() == reflect.Struct {
+			row := map[string]string{}
+			v := reflect.Indirect(item)
+			for j := 0; j < v.NumField(); j++ {
+				name := v.Type().Field(j).Name
+				value := v.Field(j).Interface()
+				maxWidth, ok := columnWidths[name]
+				_ = maxWidth
+				if !ok {
+					continue
+				}
+				switch z := value.(type) {
+				case string:
+					if len(z) > maxWidth {
+						columnWidths[name] = len(z)
+					}
+					row[name] = z
+				case float64, float32:
+					ff := fmt.Sprintf("%.2f", z)
+					if len(ff) > maxWidth {
+						columnWidths[name] = len(ff)
+					}
+					row[name] = ff
+				case int, int8, int16, int32, int64:
+					ff := fmt.Sprintf("%d", z)
+					if len(ff) > maxWidth {
+						columnWidths[name] = len(ff)
+					}
+					row[name] = ff
+				}
+			}
+			rows = append(rows, row)
+		}
+	}
+	sb.WriteString("\t\t\t|")
+	for _, c := range columns {
+		sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", c))
+		sb.WriteString("|")
+	}
+	sb.WriteString("\n")
+
+	for i, r := range rows {
+		_ = r
+		if i != 0 {
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\t\t\t|")
+		for _, c := range columns {
+			sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", r[c]))
+			_ = c
+
+			sb.WriteString("|")
+		}
+	}
+
+	s := &featureStep{
+		kind:  isTable,
+		title: sb.String(),
+	}
+
+	n.step = s
+
+	w.currentFeatureStep.n.children = append(w.currentFeatureStep.n.children, n)
 }
 
 // Get retrieves a value provided a name. If there is no such

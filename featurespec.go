@@ -75,7 +75,7 @@ type FeatureSuite struct {
 }
 
 // NewFeatureSuite returns a new [FeatureSuite] instance.
-func NewFeatureSuite(t *testing.T, options ...SuiteOption) *FeatureSuite {
+func newFeatureSuite(t *testing.T, options ...SuiteOption) *FeatureSuite {
 	t.Helper()
 	fs := &FeatureSuite{
 		t:        t,
@@ -138,7 +138,7 @@ func (fs *FeatureSuite) prevKind() featureStepKind {
 }
 
 func FeatureSuite2(t *testing.T, f func(fs *FeatureSuite)) {
-	fs := NewFeatureSuite(t)
+	fs := newFeatureSuite(t)
 
 	defer fs.start()
 
@@ -557,6 +557,8 @@ func (fs *FeatureSuite) copyStack() {
 func (fs *FeatureSuite) Table(items any, columns ...string) { //nolint:gocognit,cyclop
 	fs.t.Helper()
 
+	// TODO: detect when using in "parallel" context, and if yes, error. Should use the `World.Table` method in such cases.
+
 	// TODO: validate table was called in valid call site
 
 	var sb strings.Builder
@@ -693,15 +695,13 @@ func (fs *FeatureSuite) start() {
 						//s.done = func() {
 						//	fs.wg.Done()
 						//}
-						fs.mu.Lock()
 
-						fs.currentStep = s
+						world.currentFeatureStep = s
 
 						s.cb.(func(w *World))(world)
 
-						fs.currentStep = nil
+						world.currentFeatureStep = nil
 
-						fs.mu.Unlock()
 						continue
 					}
 					if s.cb != nil {
