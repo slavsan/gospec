@@ -11,12 +11,12 @@ import (
 func TestSuiteWithPrintedFilenames(t *testing.T) {
 	var (
 		out  bytes.Buffer
-		spec *Suite
+		spec *SpecSuite
 		tm   = &mock{t: t}
 	)
 
 	func() {
-		WithSpecSuite(t, func(s *Suite) {
+		WithSpecSuite(t, func(s *SpecSuite) {
 			spec = s
 			s.t = tm
 

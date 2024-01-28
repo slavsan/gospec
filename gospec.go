@@ -14,11 +14,11 @@ type Describe func(title string, cb any)
 type BeforeEach func(cb any)
 type It func(title string, cb any)
 
-// Suite is a spec suite which follows the rspec syntax, i.e.
+// SpecSuite is a spec suite which follows the rspec syntax, i.e.
 // describe, beforeEach, it blocks, etc. It has several methods
-// that can be called on it: [Suite.Describe], [Suite.BeforeEach],
-// and [Suite.It].
-type Suite struct {
+// that can be called on it: [SpecSuite.Describe], [SpecSuite.BeforeEach],
+// and [SpecSuite.It].
+type SpecSuite struct {
 	t              testingInterface
 	parallel       bool
 	done           func()
@@ -37,7 +37,7 @@ type Suite struct {
 	wg             *sync.WaitGroup
 }
 
-func WithSpecSuite(t *testing.T, f func(s *Suite)) {
+func WithSpecSuite(t *testing.T, f func(s *SpecSuite)) {
 	s := newTestSuite(t)
 
 	defer s.start2()
@@ -45,7 +45,7 @@ func WithSpecSuite(t *testing.T, f func(s *Suite)) {
 	f(s)
 }
 
-func (suite *Suite) With(options ...SuiteOption) *Suite {
+func (suite *SpecSuite) With(options ...SuiteOption) *SpecSuite {
 	for _, o := range options {
 		o(suite)
 	}
@@ -80,10 +80,10 @@ type step struct {
 	done     func()
 }
 
-// NewTestSuite creates a new instance of Suite.
-func newTestSuite(t *testing.T, options ...SuiteOption) *Suite {
+// NewTestSuite creates a new instance of SpecSuite.
+func newTestSuite(t *testing.T, options ...SuiteOption) *SpecSuite {
 	t.Helper()
-	suite := &Suite{
+	suite := &SpecSuite{
 		t:        t,
 		out:      os.Stdout,
 		indent:   0,
@@ -98,7 +98,7 @@ func newTestSuite(t *testing.T, options ...SuiteOption) *Suite {
 	return suite
 }
 
-func (suite *Suite) start2(onDone ...func()) {
+func (suite *SpecSuite) start2(onDone ...func()) {
 	if suite.parallel && len(onDone) > 1 {
 		suite.t.Errorf("invalid number of callbacks passed to start, expected 0 or 1, got %d", len(onDone))
 		return
@@ -140,7 +140,7 @@ func (suite *Suite) start2(onDone ...func()) {
 	}()
 }
 
-// API returns the exposed methods on the [Suite] instance. It's intended usage is as follows:
+// API returns the exposed methods on the [SpecSuite] instance. It's intended usage is as follows:
 //
 //	describe, beforeEach, it := gospec.NewTestSuite(t).API()
 //
@@ -176,7 +176,7 @@ func (suite *Suite) start2(onDone ...func()) {
 //
 //		// ..
 //	})
-func (suite *Suite) API() (
+func (suite *SpecSuite) API() (
 	Describe,
 	BeforeEach,
 	It,
@@ -194,11 +194,11 @@ func (suite *Suite) API() (
 //	return lastStep.block == isIt
 //}
 
-func (suite *Suite) foo() {
+func (suite *SpecSuite) foo() {
 	suite.wg.Add(len(suite.suites[suite.atSuiteIndex:]))
 }
 
-func (suite *Suite) start() {
+func (suite *SpecSuite) start() {
 	for i := suite.atSuiteIndex; i < len(suite.suites); i++ {
 		suite2 := suite.suites[i]
 		suite.atSuiteIndex++
@@ -260,17 +260,17 @@ func buildSuiteTitle(suite []*step) string {
 	return sb.String()
 }
 
-func (suite *Suite) pushStack(s *step) {
+func (suite *SpecSuite) pushStack(s *step) {
 	suite.t.Helper()
 	suite.stack = append(suite.stack, s)
 }
 
-func (suite *Suite) pushStack2(n *node) {
+func (suite *SpecSuite) pushStack2(n *node) {
 	suite.t.Helper()
 	suite.nodesStack = append(suite.nodesStack, n)
 }
 
-func (suite *Suite) popStack(s *step) {
+func (suite *SpecSuite) popStack(s *step) {
 	suite.t.Helper()
 	if len(suite.stack) == 0 {
 		suite.t.Errorf("unexpected empty stack")
@@ -286,7 +286,7 @@ func (suite *Suite) popStack(s *step) {
 	suite.stack = suite.stack[:len(suite.stack)-1]
 }
 
-func (suite *Suite) popStack2(n *node) {
+func (suite *SpecSuite) popStack2(n *node) {
 	suite.t.Helper()
 	if len(suite.nodesStack) == 0 {
 		suite.t.Errorf("unexpected empty node stack")
@@ -302,7 +302,7 @@ func (suite *Suite) popStack2(n *node) {
 	suite.nodesStack = suite.nodesStack[:len(suite.nodesStack)-1]
 }
 
-func (suite *Suite) popStackUntilStep(s *step) {
+func (suite *SpecSuite) popStackUntilStep(s *step) {
 	suite.t.Helper()
 	if len(suite.stack) == 0 {
 		suite.t.Errorf("unexpected empty stack")
@@ -322,7 +322,7 @@ func (suite *Suite) popStackUntilStep(s *step) {
 	suite.stack = suite.stack[:index+1]
 }
 
-func (suite *Suite) popStackUntilStep2(n *node) {
+func (suite *SpecSuite) popStackUntilStep2(n *node) {
 	suite.t.Helper()
 	if len(suite.nodesStack) == 0 {
 		suite.t.Errorf("unexpected empty node stack")
@@ -342,7 +342,7 @@ func (suite *Suite) popStackUntilStep2(n *node) {
 	suite.nodesStack = suite.nodesStack[:index+1]
 }
 
-func (suite *Suite) findIndexOfStep(s *step) int {
+func (suite *SpecSuite) findIndexOfStep(s *step) int {
 	suite.t.Helper()
 	if len(suite.stack) == 0 {
 		return -1
@@ -357,7 +357,7 @@ func (suite *Suite) findIndexOfStep(s *step) int {
 	return -1
 }
 
-func (suite *Suite) findIndexOfNode(n *node) int {
+func (suite *SpecSuite) findIndexOfNode(n *node) int {
 	suite.t.Helper()
 	if len(suite.nodesStack) == 0 {
 		return -1
@@ -382,8 +382,8 @@ func (suite *Suite) findIndexOfNode(n *node) int {
 // When the [WithParallel] is used, even declaring variables in Describe is not
 // expected or advised since it would lead to undefined behaviour or race conditions.
 // In those cases, just use the [World] construct which would get passed to
-// all [Suite.BeforeEach] and [Suite.It] function calls.
-func (suite *Suite) describe(title string, cb any) {
+// all [SpecSuite.BeforeEach] and [SpecSuite.It] function calls.
+func (suite *SpecSuite) describe(title string, cb any) {
 	suite.t.Helper()
 
 	// TODO: add checks for order of blocks
@@ -449,11 +449,11 @@ func (suite *Suite) describe(title string, cb any) {
 	}
 }
 
-func (suite *Suite) isTopLevel() bool {
+func (suite *SpecSuite) isTopLevel() bool {
 	return suite.indent == 0
 }
 
-func (suite *Suite) lastSuiteContainsStep(step *step) bool {
+func (suite *SpecSuite) lastSuiteContainsStep(step *step) bool {
 	if len(suite.suites) == 0 {
 		return false
 	}
@@ -468,13 +468,13 @@ func (suite *Suite) lastSuiteContainsStep(step *step) bool {
 	return false
 }
 
-// BeforeEach is a function which executes before each [Suite.It] or [Suite.Describe]
+// BeforeEach is a function which executes before each [SpecSuite.It] or [SpecSuite.Describe]
 // block which is defined after it.
 //
 // It is used for assigning values to variables which are then used in the following
-// blocks. If the [Suite.BeforeEach] block is not followed by a [Suite.It] block, it
+// blocks. If the [SpecSuite.BeforeEach] block is not followed by a [SpecSuite.It] block, it
 // will not get executed.
-func (suite *Suite) beforeEach(cb any) {
+func (suite *SpecSuite) beforeEach(cb any) {
 	suite.t.Helper()
 
 	s := &step{
@@ -486,9 +486,9 @@ func (suite *Suite) beforeEach(cb any) {
 	suite.pushStack(s)
 }
 
-// It defines a block which gets executed in a test suite as the last step. [Suite.It] blocks
+// It defines a block which gets executed in a test suite as the last step. [SpecSuite.It] blocks
 // can not be nested.
-func (suite *Suite) it(title string, cb any) {
+func (suite *SpecSuite) it(title string, cb any) {
 	suite.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -552,7 +552,7 @@ func (suite *Suite) it(title string, cb any) {
 	suite.popStack(s)
 }
 
-func (suite *Suite) copyStack() {
+func (suite *SpecSuite) copyStack() {
 	suite.t.Helper()
 	if len(suite.stack) == 0 {
 		return
@@ -563,15 +563,15 @@ func (suite *Suite) copyStack() {
 	suite.suites = append(suite.suites, suiteCopy)
 }
 
-func (suite *Suite) setOutput(w io.Writer) {
+func (suite *SpecSuite) setOutput(w io.Writer) {
 	suite.out = w
 }
 
-func (suite *Suite) setPrintFilenames() {
+func (suite *SpecSuite) setPrintFilenames() {
 	suite.printFilenames = true
 }
 
-func (suite *Suite) setParallel(done func()) {
+func (suite *SpecSuite) setParallel(done func()) {
 	suite.parallel = true
 	suite.done = done
 }

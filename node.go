@@ -12,7 +12,7 @@ type node struct {
 
 type tree []*node
 
-func (t tree) String(suite *Suite) string {
+func (t tree) String(suite *SpecSuite) string {
 	var sb strings.Builder
 	for _, n := range t {
 		n.write(&sb, 0, suite)
@@ -21,7 +21,7 @@ func (t tree) String(suite *Suite) string {
 	return sb.String()
 }
 
-func (n *node) write(sb *strings.Builder, indent int, suite *Suite) {
+func (n *node) write(sb *strings.Builder, indent int, suite *SpecSuite) {
 	if !n.step.printed {
 		n.step.printed = true
 		if n.step.block == isIt {

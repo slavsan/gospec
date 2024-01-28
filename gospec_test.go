@@ -8,7 +8,7 @@ import (
 )
 
 func TestExampleSuite(t *testing.T) {
-	WithSpecSuite(t, func(s *Suite) {
+	WithSpecSuite(t, func(s *SpecSuite) {
 		describe, beforeEach, it := s.API()
 		context := describe
 
@@ -73,16 +73,16 @@ func TestExampleSuite(t *testing.T) {
 }
 
 func TestDescribe(t *testing.T) {
-	WithSpecSuite(t, func(s *Suite) {
+	WithSpecSuite(t, func(s *SpecSuite) {
 		describe, beforeEach, it := s.API()
 		context := describe
 
 		describe("describe block", func() {
 			context("with single describe", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				var suites [][]*step
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, _ := s2.API()
 
@@ -99,9 +99,9 @@ func TestDescribe(t *testing.T) {
 				})
 			})
 			context("with two sibling describes", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, _ := s2.API()
 
@@ -124,9 +124,9 @@ func TestDescribe(t *testing.T) {
 				})
 			})
 			context("with two describes, one parent and one child", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, _ := s2.API()
 
@@ -147,9 +147,9 @@ func TestDescribe(t *testing.T) {
 				})
 			})
 			context("with three nested describes", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, _ := s2.API()
 
@@ -176,15 +176,15 @@ func TestDescribe(t *testing.T) {
 }
 
 func TestIt(t *testing.T) { //nolint:maintidx
-	WithSpecSuite(t, func(s *Suite) {
+	WithSpecSuite(t, func(s *SpecSuite) {
 		describe, beforeEach, it := s.API()
 		context := describe
 
 		describe("it block", func() {
 			context("with single describe and single it block", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, it2 := s2.API()
 
@@ -204,9 +204,9 @@ func TestIt(t *testing.T) { //nolint:maintidx
 				})
 			})
 			context("with single describe and two it blocks", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, it2 := s2.API()
 
@@ -231,9 +231,9 @@ func TestIt(t *testing.T) { //nolint:maintidx
 				})
 			})
 			context("with two describe blocks and one it block in each", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 
 						describe2, _, it2 := s2.API()
@@ -263,9 +263,9 @@ func TestIt(t *testing.T) { //nolint:maintidx
 				})
 			})
 			context("with two describe blocks and two it blocks in each", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, it2 := s2.API()
 
@@ -302,9 +302,9 @@ func TestIt(t *testing.T) { //nolint:maintidx
 				})
 			})
 			context("with a more complex example", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, it2 := s2.API()
 
@@ -339,9 +339,9 @@ func TestIt(t *testing.T) { //nolint:maintidx
 				})
 			})
 			context("with an even more complex example", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 
 						describe2, beforeEach2, it2 := s2.API()
@@ -430,9 +430,9 @@ func TestIt(t *testing.T) { //nolint:maintidx
 			})
 
 			context("with another even more complex example", func() {
-				var s2 *Suite
+				var s2 *SpecSuite
 				beforeEach(func() {
-					WithSpecSuite(t, func(s *Suite) {
+					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, beforeEach2, it2 := s2.API()
 						context2 := describe2
@@ -470,7 +470,7 @@ func TestIt(t *testing.T) { //nolint:maintidx
 }
 
 func TestUsingTestTable(t *testing.T) {
-	WithSpecSuite(t, func(s *Suite) {
+	WithSpecSuite(t, func(s *SpecSuite) {
 		describe, _, it := s.API()
 
 		describe("using a test table", func() {
