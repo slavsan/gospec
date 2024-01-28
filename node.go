@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+type node struct {
+	step     *step
+	children []*node
+}
+
 type tree []*node
 
 func (t tree) String(suite *Suite) string {

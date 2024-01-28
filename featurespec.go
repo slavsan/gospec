@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -21,12 +22,22 @@ const (
 	isGiven
 	isWhen
 	isThen
+	isTable
 )
 
 type featureStep struct {
-	kind  featureStepKind
-	title string
-	cb    any
+	t        *testing.T
+	kind     featureStepKind
+	title    string
+	printed  bool
+	file     string
+	lineNo   int
+	failed   bool
+	failedAt int
+	executed bool
+	cb       any
+	done     func()
+	n        *node2
 }
 
 // FeatureSuite is a test suite which is inspired by the Cucumber/Gherkin
@@ -53,6 +64,14 @@ type FeatureSuite struct {
 	report          strings.Builder
 	basePath        string
 	printFilenames  bool
+	nodes           []*node2
+	currNode        *node2
+	nodesStack      []*node2
+	wg              *sync.WaitGroup
+	invalid         bool
+	failedCount     int
+	mu              sync.Mutex
+	currentStep     *featureStep
 }
 
 // NewFeatureSuite returns a new [FeatureSuite] instance.
@@ -104,7 +123,7 @@ func (fs *FeatureSuite) API() (
 	func(string, any),
 	func(string, any),
 	func(string, any),
-	func(columns []string, items any),
+	func(items any, columns ...string),
 ) {
 	return fs.Feature, fs.Background, fs.Scenario, fs.Given,
 		fs.When, fs.Then, fs.Table
@@ -118,23 +137,48 @@ func (fs *FeatureSuite) prevKind() featureStepKind {
 	return fs.stack[len(fs.stack)-1].kind
 }
 
+func FeatureSuite2(t *testing.T, f func(fs *FeatureSuite)) {
+	fs := NewFeatureSuite(t)
+
+	defer fs.start()
+
+	f(fs)
+}
+
 // Feature defines a feature block, this is the top-level block and should
 // define a separate piece of functionality.
 func (fs *FeatureSuite) Feature(title string, cb any) {
 	fs.report = strings.Builder{}
 	fs.t.Helper()
 	if fs.prevKind() != isUndefined {
+		fs.invalid = true
 		fs.t.Errorf("invalid position for `Feature` function, it must be at top level")
 		return
 	}
 
-	fs.print(fmt.Sprintf("Feature: %s", title))
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	n := &node2{
+		// ..
+	}
+
+	fs.nodes = append(fs.nodes, n)
+
+	fs.currNode = n
 
 	s := &featureStep{
-		kind:  isFeature,
-		title: title,
+		kind:   isFeature,
+		title:  title,
+		file:   file,
+		lineNo: lineNo,
 	}
+
+	n.step = s
+
 	fs.pushStack(s)
+	fs.pushStack2(n)
 
 	// TODO: validate cb is of correct type
 	cb.(func())()
@@ -144,20 +188,25 @@ func (fs *FeatureSuite) Feature(title string, cb any) {
 	fs.popStack(s)
 	fs.backgroundStack = []*featureStep{}
 
+	fs.popStackUntilStep2(n)
+	fs.popStack2(n)
+
+	fs.currNode = nil
+
 	if len(fs.stack) > 0 {
 		fs.t.Errorf("expected stack to be empty but it has %d steps", len(fs.stack))
 		return
 	}
-
-	fs.start()
-
-	fs.report.WriteString("\n")
-	_, _ = fs.out.Write([]byte(fs.report.String()))
 }
 
 func (fs *FeatureSuite) pushStack(s *featureStep) {
 	fs.t.Helper()
 	fs.stack = append(fs.stack, s)
+}
+
+func (fs *FeatureSuite) pushStack2(n *node2) {
+	fs.t.Helper()
+	fs.nodesStack = append(fs.nodesStack, n)
 }
 
 func (fs *FeatureSuite) pushToBackgroundStack(s *featureStep) {
@@ -191,6 +240,22 @@ func (fs *FeatureSuite) popStack(s *featureStep) {
 	}
 
 	fs.stack = fs.stack[:len(fs.stack)-1]
+}
+
+func (fs *FeatureSuite) popStack2(n *node2) {
+	fs.t.Helper()
+	if len(fs.nodesStack) == 0 {
+		fs.t.Errorf("unexpected empty node stack")
+		return
+	}
+
+	lastStep := fs.nodesStack[len(fs.nodesStack)-1]
+	if lastStep != n {
+		fs.t.Errorf("unexpected node")
+		return
+	}
+
+	fs.nodesStack = fs.nodesStack[:len(fs.nodesStack)-1]
 }
 
 func (fs *FeatureSuite) popStackUntilStep(s *featureStep) {
@@ -237,18 +302,73 @@ func (fs *FeatureSuite) Background(cb any) {
 		return
 	}
 
-	fs.print("\n\tBackground:")
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	n := &node2{
+		// ..
+	}
 
 	s := &featureStep{
-		kind: isBackground,
+		kind:   isBackground,
+		file:   file,
+		lineNo: lineNo,
 	}
+
+	n.step = s
+
+	fs.currNode.children = append(fs.currNode.children, n)
+	fs.currNode = n
 
 	fs.inBackground = true
 	fs.pushToBackgroundStack(s)
 
+	fs.pushStack2(n)
+
 	cb.(func())()
 
+	fs.popStackUntilStep2(n)
+	fs.popStack2(n)
+
 	fs.inBackground = false
+
+	fs.currNode = fs.nodesStack[len(fs.nodesStack)-1]
+}
+
+func (fs *FeatureSuite) popStackUntilStep2(n *node2) {
+	fs.t.Helper()
+	if len(fs.nodesStack) == 0 {
+		fs.t.Errorf("unexpected empty node stack")
+		return
+	}
+
+	index := fs.findIndexOfNode(n)
+	if index < 0 {
+		return
+	}
+
+	if index+1 > len(fs.nodesStack) {
+		fs.t.Errorf("out of bound index for node search")
+		return
+	}
+
+	fs.nodesStack = fs.nodesStack[:index+1]
+}
+
+func (fs *FeatureSuite) findIndexOfNode(n *node2) int {
+	fs.t.Helper()
+	if len(fs.nodesStack) == 0 {
+		return -1
+	}
+
+	for i := len(fs.nodesStack) - 1; i >= 0; i-- {
+		if fs.nodesStack[i] == n {
+			return i
+		}
+	}
+
+	return -1
 }
 
 // Scenario defines a scenario block. It should test a particular feature in a particular
@@ -256,19 +376,38 @@ func (fs *FeatureSuite) Background(cb any) {
 func (fs *FeatureSuite) Scenario(title string, cb any) {
 	fs.t.Helper()
 	if fs.prevKind() != isFeature && fs.prevKind() != isBackground {
+		fs.invalid = true
 		fs.t.Errorf("invalid position for `Scenario` function, it must be inside a `Feature` call")
 		return
 	}
 
-	fs.print(fmt.Sprintf("\n\tScenario: %s", title))
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	n := &node2{
+		// ..
+	}
 
 	s := &featureStep{
-		kind:  isScenario,
-		title: title,
+		kind:   isScenario,
+		title:  title,
+		lineNo: lineNo,
+		file:   file,
 	}
 	fs.pushStack(s)
 
+	n.step = s
+
+	fs.currNode.children = append(fs.currNode.children, n)
+	fs.currNode = n
+
+	fs.pushStack2(n)
+
 	cb.(func())()
+
+	fs.popStack2(n)
+	fs.currNode = fs.nodesStack[len(fs.nodesStack)-1]
 
 	if len(fs.stack) > 0 {
 		fs.copyStack()
@@ -284,13 +423,54 @@ func (fs *FeatureSuite) Scenario(title string, cb any) {
 func (fs *FeatureSuite) Given(title string, cb any) {
 	fs.t.Helper()
 
-	fs.print(fmt.Sprintf("\t\tGiven %s", title))
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	n := &node2{
+		// ..
+	}
 
 	s := &featureStep{
-		kind:  isGiven,
-		title: title,
-		cb:    cb,
+		kind:   isGiven,
+		title:  title,
+		lineNo: lineNo,
+		file:   file,
+		//cb:     cb,
 	}
+
+	if fs.parallel {
+		s.cb = func(w *World) {
+			w.T.Helper()
+
+			//defer s.done()
+
+			cb.(func(*World))(w)
+			//s.executed = true
+
+			if w.T.Failed() {
+				//s.failed = true
+				//fs.failedCount++
+				//s.failedAt = fs.failedCount
+			}
+		}
+	} else {
+		s.cb = func() {
+			fs.t.Helper()
+			cb.(func())()
+			s.executed = true
+
+			if fs.t.Failed() {
+				s.failed = true
+				fs.failedCount++
+				s.failedAt = fs.failedCount
+			}
+		}
+	}
+
+	n.step = s
+	fs.currNode.children = append(fs.currNode.children, n)
+
 	if fs.inBackground {
 		fs.pushToBackgroundStack(s)
 	} else {
@@ -302,13 +482,24 @@ func (fs *FeatureSuite) Given(title string, cb any) {
 func (fs *FeatureSuite) When(title string, cb any) {
 	fs.t.Helper()
 
-	fs.print(fmt.Sprintf("\t\tWhen %s", title))
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	n := &node2{
+		// ..
+	}
 
 	s := &featureStep{
-		kind:  isWhen,
-		title: title,
-		cb:    cb,
+		kind:   isWhen,
+		title:  title,
+		lineNo: lineNo,
+		file:   file,
+		cb:     cb,
 	}
+
+	n.step = s
+	fs.currNode.children = append(fs.currNode.children, n)
 
 	if fs.inBackground {
 		fs.pushToBackgroundStack(s)
@@ -321,13 +512,27 @@ func (fs *FeatureSuite) When(title string, cb any) {
 func (fs *FeatureSuite) Then(title string, cb any) {
 	fs.t.Helper()
 
-	fs.print(fmt.Sprintf("\t\tThen %s", title))
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	n := &node2{
+		// ..
+	}
 
 	s := &featureStep{
-		kind:  isThen,
-		title: title,
-		cb:    cb,
+		kind:   isThen,
+		title:  title,
+		lineNo: lineNo,
+		file:   file,
+		cb:     cb,
 	}
+
+	n.step = s
+	fs.currNode.children = append(fs.currNode.children, n)
+
+	s.n = n
+
 	if fs.inBackground {
 		fs.pushToBackgroundStack(s)
 	} else {
@@ -349,10 +554,15 @@ func (fs *FeatureSuite) copyStack() {
 }
 
 // Table is a utility function to only visualize test data in a table.
-func (fs *FeatureSuite) Table(columns []string, items interface{}) { //nolint:gocognit,cyclop
+func (fs *FeatureSuite) Table(items any, columns ...string) { //nolint:gocognit,cyclop
 	fs.t.Helper()
 
 	// TODO: validate table was called in valid call site
+
+	var sb strings.Builder
+	n := &node2{
+		// ..
+	}
 
 	items2 := reflect.ValueOf(items)
 
@@ -406,24 +616,35 @@ func (fs *FeatureSuite) Table(columns []string, items interface{}) { //nolint:go
 			rows = append(rows, row)
 		}
 	}
-	fs.report.WriteString("\t\t\t|")
+	sb.WriteString("\t\t\t|")
 	for _, c := range columns {
-		fs.report.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", c))
-		fs.report.WriteString("|")
+		sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", c))
+		sb.WriteString("|")
 	}
-	fs.report.WriteString("\n")
+	sb.WriteString("\n")
 
-	for _, r := range rows {
+	for i, r := range rows {
 		_ = r
-		fs.report.WriteString("\t\t\t|")
+		if i != 0 {
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\t\t\t|")
 		for _, c := range columns {
-			fs.report.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", r[c]))
+			sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", r[c]))
 			_ = c
 
-			fs.report.WriteString("|")
+			sb.WriteString("|")
 		}
-		fs.report.WriteString("\n")
 	}
+
+	s := &featureStep{
+		kind:  isTable,
+		title: sb.String(),
+	}
+
+	n.step = s
+
+	fs.currentStep.n.children = append(fs.currentStep.n.children, n)
 }
 
 func buildSuiteTitleForFeature(suite []*featureStep) string {
@@ -439,35 +660,92 @@ func buildSuiteTitleForFeature(suite []*featureStep) string {
 	return sb.String()
 }
 
+func (fs *FeatureSuite) With(options ...SuiteOption) *FeatureSuite {
+	for _, o := range options {
+		o(fs)
+	}
+	return fs
+}
+
 func (fs *FeatureSuite) start() {
+	fs.wg = &sync.WaitGroup{}
+	fs.wg.Add(len(fs.suites))
 	for i := fs.atSuiteIndex; i < len(fs.suites); i++ {
 		suite := fs.suites[i]
 		fs.atSuiteIndex++
 		fs.t.Run(buildSuiteTitleForFeature(suite), func(t *testing.T) {
 			t.Helper()
-			world := newWorld()
-			world.T = t
+
+			if fs.t.Failed() {
+				if fs.parallel {
+					fs.wg.Done()
+				}
+				//t.Skip()
+			}
+
 			if fs.parallel {
+				world := newWorld()
+				world.T = t
+
 				t.Parallel()
 				for _, s := range suite {
 					if s.kind == isGiven || s.kind == isWhen || s.kind == isThen {
+						//s.done = func() {
+						//	fs.wg.Done()
+						//}
+						fs.mu.Lock()
+
+						fs.currentStep = s
+
 						s.cb.(func(w *World))(world)
+
+						fs.currentStep = nil
+
+						fs.mu.Unlock()
 						continue
 					}
 					if s.cb != nil {
 						s.cb.(func())()
 					}
 				}
+				fs.wg.Done()
 				return
 			}
 
 			for _, s := range suite {
 				if s.cb != nil {
+					if s.kind == isGiven || s.kind == isWhen || s.kind == isThen {
+						s.t = t
+					}
+
+					fs.currentStep = s
+
 					s.cb.(func())()
+
+					fs.currentStep = nil
 				}
 			}
 		})
 	}
+
+	if fs.invalid {
+		return
+	}
+
+	if !fs.parallel {
+		_, _ = fs.out.Write([]byte(tree2(fs.nodes).String(fs)))
+		return
+	}
+
+	go func() {
+		fs.wg.Wait()
+
+		_, _ = fs.out.Write([]byte(tree2(fs.nodes).String(fs)))
+
+		if fs.done != nil {
+			fs.done()
+		}
+	}()
 }
 
 func (fs *FeatureSuite) print(title string) {

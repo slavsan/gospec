@@ -23,7 +23,6 @@ type Suite struct {
 	indent         int
 	atSuiteIndex   int
 	out            io.Writer
-	report         strings.Builder
 	basePath       string
 	printFilenames bool
 	nodes          []*node
@@ -369,11 +368,6 @@ func (suite *Suite) findIndexOfNode(n *node) int {
 	return -1
 }
 
-type node struct {
-	step     *step
-	children []*node
-}
-
 // Describe is a function which describes a feature or contextual logical
 // block, which may contain inner describe, beforeEach, or it blocks.
 //
@@ -400,7 +394,7 @@ func (suite *Suite) Describe(title string, cb any) {
 
 	if suite.isTopLevel() {
 		// starting with a new top-level describe, so create a new router
-		suite.report = strings.Builder{}
+		//suite.report = strings.Builder{}
 
 		// top level, so the node should go at the suites level
 		suite.nodes = append(suite.nodes, n)
