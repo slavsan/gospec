@@ -26,7 +26,7 @@ func newWorld() *World {
 	}
 }
 
-func (w *World) Table(items any, columns ...string) {
+func (w *World) Table(fs *FeatureSuite, items any, columns ...string) {
 	w.T.Helper()
 
 	// TODO: validate table was called in valid call site
@@ -115,6 +115,15 @@ func (w *World) Table(items any, columns ...string) {
 	}
 
 	n.step = s
+
+	fs.mu.Lock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	defer fs.mu.Unlock()
+
+	if len(w.currentFeatureStep.n.children) > 0 {
+		return
+	}
 
 	w.currentFeatureStep.n.children = append(w.currentFeatureStep.n.children, n)
 }

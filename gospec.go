@@ -81,19 +81,13 @@ type step struct {
 }
 
 // NewTestSuite creates a new instance of SpecSuite.
-func newTestSuite(t *testing.T, options ...SuiteOption) *SpecSuite {
+func newTestSuite(t *testing.T) *SpecSuite {
 	t.Helper()
 	suite := &SpecSuite{
 		t:        t,
 		out:      os.Stdout,
 		indent:   0,
 		basePath: getBasePath(),
-	}
-	for _, o := range options {
-		o(suite)
-	}
-	if suite.parallel {
-		suite.wg = &sync.WaitGroup{}
 	}
 	return suite
 }
@@ -194,10 +188,6 @@ func (suite *SpecSuite) API() (
 //	return lastStep.block == isIt
 //}
 
-func (suite *SpecSuite) foo() {
-	suite.wg.Add(len(suite.suites[suite.atSuiteIndex:]))
-}
-
 func (suite *SpecSuite) start() {
 	for i := suite.atSuiteIndex; i < len(suite.suites); i++ {
 		suite2 := suite.suites[i]
@@ -209,8 +199,8 @@ func (suite *SpecSuite) start() {
 			if suite.t.Failed() {
 				if suite.parallel {
 					suite.wg.Done()
+					t.Skip()
 				}
-				t.Skip()
 			}
 
 			if suite.parallel {

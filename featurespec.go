@@ -69,7 +69,6 @@ type FeatureSuite struct {
 	inBackground    bool
 	atSuiteIndex    int
 	out             io.Writer
-	report          strings.Builder
 	basePath        string
 	printFilenames  bool
 	nodes           []*node2
@@ -83,15 +82,12 @@ type FeatureSuite struct {
 }
 
 // NewFeatureSuite returns a new [FeatureSuite] instance.
-func newFeatureSuite(t *testing.T, options ...SuiteOption) *FeatureSuite {
+func newFeatureSuite(t *testing.T) *FeatureSuite {
 	t.Helper()
 	fs := &FeatureSuite{
 		t:        t,
 		out:      os.Stdout,
 		basePath: getBasePath(),
-	}
-	for _, o := range options {
-		o(fs)
 	}
 	return fs
 }
@@ -156,7 +152,6 @@ func WithFeatureSuite(t *testing.T, f func(fs *FeatureSuite)) {
 // Feature defines a feature block, this is the top-level block and should
 // define a separate piece of functionality.
 func (fs *FeatureSuite) feature(title string, cb any) {
-	fs.report = strings.Builder{}
 	fs.t.Helper()
 	if fs.prevKind() != isUndefined {
 		fs.invalid = true
@@ -479,6 +474,8 @@ func (fs *FeatureSuite) given(title string, cb any) {
 	n.step = s
 	fs.currNode.children = append(fs.currNode.children, n)
 
+	s.n = n
+
 	if fs.inBackground {
 		fs.pushToBackgroundStack(s)
 	} else {
@@ -508,6 +505,8 @@ func (fs *FeatureSuite) when(title string, cb any) {
 
 	n.step = s
 	fs.currNode.children = append(fs.currNode.children, n)
+
+	s.n = n
 
 	if fs.inBackground {
 		fs.pushToBackgroundStack(s)
@@ -754,19 +753,6 @@ func (fs *FeatureSuite) start() {
 			fs.done()
 		}
 	}()
-}
-
-func (fs *FeatureSuite) print(title string) {
-	_, file, lineNo, _ := runtime.Caller(2)
-
-	if !fs.printFilenames {
-		fs.report.WriteString(title + "\n")
-		return
-	}
-
-	fs.report.WriteString(fmt.Sprintf("%s\t%s:%d\n",
-		title, strings.TrimPrefix(file, fs.basePath), lineNo,
-	))
 }
 
 func (fs *FeatureSuite) setOutput(w io.Writer) {

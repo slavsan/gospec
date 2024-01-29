@@ -556,9 +556,21 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 			feature, background, scenario,
 				given, when, then, _ := s.With(Output(&out), Parallel(func() { close(done) })).API()
 
+			type Product struct {
+				Name  string
+				Price float64
+				Type  int
+			}
+
 			feature("Checkout 1", func() {
 				background(func() {
 					given("given 1", func(w *World) {
+						var items []Product
+						items = []Product{
+							{Name: "Gopher toy", Price: 1.99, Type: 10},
+							{Name: "Crab toy", Price: 2.49, Type: 12},
+						}
+						w.Table(s, items, "Name", "Price")
 						w.Set("nums", []int{1})
 					})
 					when("when 1", func(w *World) {
@@ -650,9 +662,17 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 
 				scenario("scenario 12", func() {
 					given("given 12", func(w *World) {
+						var items []Product
+
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 17)
 						})
+
+						items = []Product{
+							{Name: "Gopher toy", Price: 14.99, Type: 2},
+							{Name: "Crab toy", Price: 17.49, Type: 8},
+						}
+						w.Table(s, items, "Name", "Price")
 					})
 					when("when 12", func(w *World) {
 						w.Swap("nums", func(current any) any {
@@ -712,6 +732,9 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 			``,
 			`	Background:`,
 			`		Given given 1`,
+			`			| Name       | Price |`,
+			`			| Gopher toy | 1.99  |`,
+			`			| Crab toy   | 2.49  |`,
 			`		When when 1`,
 			`		Then then 1`,
 			``,
@@ -739,6 +762,9 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 			``,
 			`	Scenario: scenario 12`,
 			`		Given given 12`,
+			`			| Name       | Price |`,
+			`			| Gopher toy | 14.99 |`,
+			`			| Crab toy   | 17.49 |`,
 			`		When when 12`,
 			`		Then then 12`,
 			``,

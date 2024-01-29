@@ -830,3 +830,125 @@ func TestSpecSuitesGetExecutedInParallel(t *testing.T) {
 		}, "\n"), out.String())
 	})
 }
+
+func TestFailedTestSuitesWithFirstSuiteFailing(t *testing.T) {
+	var (
+		out  bytes.Buffer
+		spec *SpecSuite
+		tm   = &mock{t: t}
+	)
+
+	func() {
+		WithSpecSuite(t, func(s *SpecSuite) {
+			spec = s
+			s.t = tm
+			describe, _, it := s.With(Output(&out)).API()
+
+			describe("describe 1", func() {
+				it("it 1", func() {
+					tm.Errorf("fail 1")
+				})
+				it("it 2", func() {})
+			})
+
+			describe("describe 2", func() {
+				it("it 3", func() {})
+				it("it 4", func() {})
+			})
+		})
+	}()
+
+	assert.Equal(t, [][]any{{"fail 1"}}, tm.calls)
+	assert.Equal(t, []string{
+		"describe 1/it 1",
+		"describe 1/it 2",
+		"describe 2/it 3",
+		"describe 2/it 4",
+	}, tm.testTitles)
+	assert.Equal(t, 0, len(spec.stack))
+	assert.Equal(t, 4, len(spec.suites))
+	assert.Equal(t, 2, len(spec.suites[0]))
+	assert.Equal(t, "describe 1", spec.suites[0][0].title)
+	assert.Equal(t, "it 1", spec.suites[0][1].title)
+	assert.Equal(t, 2, len(spec.suites[1]))
+	assert.Equal(t, "describe 1", spec.suites[1][0].title)
+	assert.Equal(t, "it 2", spec.suites[1][1].title)
+	assert.Equal(t, 2, len(spec.suites[2]))
+	assert.Equal(t, "describe 2", spec.suites[2][0].title)
+	assert.Equal(t, "it 3", spec.suites[2][1].title)
+	assert.Equal(t, 2, len(spec.suites[3]))
+	assert.Equal(t, "describe 2", spec.suites[3][0].title)
+	assert.Equal(t, "it 4", spec.suites[3][1].title)
+	assert.Equal(t, strings.Join([]string{
+		`describe 1`,
+		`	⨯ it 1`,
+		`	s it 2`,
+		``,
+		`describe 2`,
+		`	s it 3`,
+		`	s it 4`,
+		``,
+		``,
+	}, "\n"), out.String())
+}
+
+func TestFailedTestSuitesWithLastSuiteFailing(t *testing.T) {
+	var (
+		out  bytes.Buffer
+		spec *SpecSuite
+		tm   = &mock{t: t}
+	)
+
+	func() {
+		WithSpecSuite(t, func(s *SpecSuite) {
+			spec = s
+			s.t = tm
+			describe, _, it := s.With(Output(&out)).API()
+
+			describe("describe 1", func() {
+				it("it 1", func() {})
+				it("it 2", func() {})
+			})
+
+			describe("describe 2", func() {
+				it("it 3", func() {})
+				it("it 4", func() {
+					s.t.Errorf("fail 4")
+				})
+			})
+		})
+	}()
+
+	assert.Equal(t, [][]any{{"fail 4"}}, tm.calls)
+	assert.Equal(t, []string{
+		"describe 1/it 1",
+		"describe 1/it 2",
+		"describe 2/it 3",
+		"describe 2/it 4",
+	}, tm.testTitles)
+	assert.Equal(t, 0, len(spec.stack))
+	assert.Equal(t, 4, len(spec.suites))
+	assert.Equal(t, 2, len(spec.suites[0]))
+	assert.Equal(t, "describe 1", spec.suites[0][0].title)
+	assert.Equal(t, "it 1", spec.suites[0][1].title)
+	assert.Equal(t, 2, len(spec.suites[1]))
+	assert.Equal(t, "describe 1", spec.suites[1][0].title)
+	assert.Equal(t, "it 2", spec.suites[1][1].title)
+	assert.Equal(t, 2, len(spec.suites[2]))
+	assert.Equal(t, "describe 2", spec.suites[2][0].title)
+	assert.Equal(t, "it 3", spec.suites[2][1].title)
+	assert.Equal(t, 2, len(spec.suites[3]))
+	assert.Equal(t, "describe 2", spec.suites[3][0].title)
+	assert.Equal(t, "it 4", spec.suites[3][1].title)
+	assert.Equal(t, strings.Join([]string{
+		`describe 1`,
+		`	✔ it 1`,
+		`	✔ it 2`,
+		``,
+		`describe 2`,
+		`	✔ it 3`,
+		`	⨯ it 4`,
+		``,
+		``,
+	}, "\n"), out.String())
+}
