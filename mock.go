@@ -9,6 +9,7 @@ type mock struct {
 	t          *testing.T
 	calls      [][]any
 	testTitles []string
+	childMocks []*mock
 }
 
 func (m *mock) Helper() {
@@ -36,7 +37,11 @@ func (m *mock) Errorf(format string, args ...interface{}) {
 
 func (m *mock) Run(name string, f func(t *testing.T)) bool {
 	m.testTitles = append(m.testTitles, name)
-	m.t.Run(name, f)
+	m.t.Run(name, func(t *testing.T) {
+		tm := &mock{t: t}
+		m.childMocks = append(m.childMocks, tm)
+		f(t)
+	})
 	return false
 }
 

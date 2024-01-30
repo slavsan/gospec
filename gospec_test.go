@@ -17,20 +17,20 @@ func TestExampleSuite(t *testing.T) {
 				var cart []string
 				var appliedCoupons []string
 
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					cart = []string{"Gopher toy"}
 				})
-				it("should have 1 item in the cart", func() {
+				it("should have 1 item in the cart", func(w *W) {
 					assert.Equal(t, 1, len(cart))
 				})
-				it("should have no coupon applied by default", func() {
+				it("should have no coupon applied by default", func(w *W) {
 					assert.Equal(t, 0, len(appliedCoupons))
 				})
 				context("when we add one more item to the cart", func() {
-					beforeEach(func() {
+					beforeEach(func(w *W) {
 						cart = append(cart, "Crab toy")
 					})
-					it("should have 2 items in the cart", func() {
+					it("should have 2 items in the cart", func(w *W) {
 						assert.Equal(t, 2, len(cart))
 					})
 					context("when the coupon is eligible for this purchase", func() {
@@ -39,7 +39,7 @@ func TestExampleSuite(t *testing.T) {
 								// ..
 							})
 							context("and the coupon value is less than the purchase value", func() {
-								beforeEach(func() {
+								beforeEach(func(w *W) {
 									// ..
 								})
 								describe("when completing the purchase", func() {
@@ -52,7 +52,7 @@ func TestExampleSuite(t *testing.T) {
 			})
 			context("when shopping cart is empty", func() {
 				var cart []string
-				it("should have 0 items", func() {
+				it("should have 0 items", func(w *W) {
 					assert.Equal(t, 0, len(cart))
 				})
 			})
@@ -61,10 +61,10 @@ func TestExampleSuite(t *testing.T) {
 		describe("Sign Up", func() {
 			var signedUp bool
 			context("when the user signs up", func() {
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					signedUp = true
 				})
-				it("should be signed up", func() {
+				it("should be signed up", func(w *W) {
 					assert.Equal(t, true, signedUp)
 				})
 			})
@@ -81,7 +81,7 @@ func TestDescribe(t *testing.T) {
 			context("with single describe", func() {
 				var s2 *SpecSuite
 				var suites [][]*step
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, _ := s2.API()
@@ -91,16 +91,16 @@ func TestDescribe(t *testing.T) {
 						})
 					})
 				})
-				it("should have empty stack", func() {
+				it("should have empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have just no suites defined", func() {
+				it("should have just no suites defined", func(w *W) {
 					assert.Equal(t, 0, len(suites))
 				})
 			})
 			context("with two sibling describes", func() {
 				var s2 *SpecSuite
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, _ := s2.API()
@@ -112,10 +112,10 @@ func TestDescribe(t *testing.T) {
 						})
 					})
 				})
-				it("should have empty stack", func() {
+				it("should have empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have 2 suites", func() {
+				it("should have 2 suites", func(w *W) {
 					assert.Equal(t, 2, len(s2.suites))
 					assert.Equal(t, 1, len(s2.suites[0]))
 					assert.Equal(t, "describe", buildSuiteTitle(s2.suites[0]))
@@ -125,7 +125,7 @@ func TestDescribe(t *testing.T) {
 			})
 			context("with two describes, one parent and one child", func() {
 				var s2 *SpecSuite
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, _ := s2.API()
@@ -137,10 +137,10 @@ func TestDescribe(t *testing.T) {
 						})
 					})
 				})
-				it("should have empty stack", func() {
+				it("should have empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have 1 suite", func() {
+				it("should have 1 suite", func(w *W) {
 					assert.Equal(t, 1, len(s2.suites))
 					assert.Equal(t, 2, len(s2.suites[0]))
 					assert.Equal(t, "parent describe/child describe", buildSuiteTitle(s2.suites[0]))
@@ -148,7 +148,7 @@ func TestDescribe(t *testing.T) {
 			})
 			context("with three nested describes", func() {
 				var s2 *SpecSuite
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, _ := s2.API()
@@ -162,10 +162,10 @@ func TestDescribe(t *testing.T) {
 						})
 					})
 				})
-				it("should have empty stack", func() {
+				it("should have empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have 1 suites", func() {
+				it("should have 1 suites", func(w *W) {
 					assert.Equal(t, 1, len(s2.suites))
 					assert.Equal(t, 3, len(s2.suites[0]))
 					assert.Equal(t, "top most describe/nested describe/most nested describe", buildSuiteTitle(s2.suites[0]))
@@ -183,21 +183,21 @@ func TestIt(t *testing.T) { //nolint:maintidx
 		describe("it block", func() {
 			context("with single describe and single it block", func() {
 				var s2 *SpecSuite
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, it2 := s2.API()
 
 						describe2("testing describe", func() {
-							it2("testing it", func() {
+							it2("testing it", func(w *W) {
 							})
 						})
 					})
 				})
-				it("should have empty stack", func() {
+				it("should have empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have just 1 suite with just 2 steps defined", func() {
+				it("should have just 1 suite with just 2 steps defined", func(w *W) {
 					assert.Equal(t, 1, len(s2.suites))
 					assert.Equal(t, 2, len(s2.suites[0]))
 					assert.Equal(t, "testing describe/testing it", buildSuiteTitle(s2.suites[0]))
@@ -205,24 +205,24 @@ func TestIt(t *testing.T) { //nolint:maintidx
 			})
 			context("with single describe and two it blocks", func() {
 				var s2 *SpecSuite
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, it2 := s2.API()
 
 						// unit under test
 						describe2("testing describe", func() {
-							it2("testing it", func() {
+							it2("testing it", func(w *W) {
 							})
-							it2("testing another it", func() {
+							it2("testing another it", func(w *W) {
 							})
 						})
 					})
 				})
-				it("should have empty stack", func() {
+				it("should have empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have 2 suites with just 2 steps defined in each", func() {
+				it("should have 2 suites with just 2 steps defined in each", func(w *W) {
 					assert.Equal(t, 2, len(s2.suites))
 					assert.Equal(t, 2, len(s2.suites[0]))
 					assert.Equal(t, "testing describe/testing it", buildSuiteTitle(s2.suites[0]))
@@ -232,7 +232,7 @@ func TestIt(t *testing.T) { //nolint:maintidx
 			})
 			context("with two describe blocks and one it block in each", func() {
 				var s2 *SpecSuite
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 
@@ -240,21 +240,21 @@ func TestIt(t *testing.T) { //nolint:maintidx
 
 						// unit under test
 						describe2("testing describe", func() {
-							it2("testing it", func() {
+							it2("testing it", func(w *W) {
 							})
 						})
 
 						// unit under test
 						describe2("testing another describe", func() {
-							it2("testing another it", func() {
+							it2("testing another it", func(w *W) {
 							})
 						})
 					})
 				})
-				it("should have empty stack", func() {
+				it("should have empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have 2 suites with just 2 steps defined in each", func() {
+				it("should have 2 suites with just 2 steps defined in each", func(w *W) {
 					assert.Equal(t, 2, len(s2.suites))
 					assert.Equal(t, 2, len(s2.suites[0]))
 					assert.Equal(t, "testing describe/testing it", buildSuiteTitle(s2.suites[0]))
@@ -264,32 +264,32 @@ func TestIt(t *testing.T) { //nolint:maintidx
 			})
 			context("with two describe blocks and two it blocks in each", func() {
 				var s2 *SpecSuite
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, it2 := s2.API()
 
 						// unit under test
 						describe2("testing describe", func() {
-							it2("first it", func() {
+							it2("first it", func(w *W) {
 							})
-							it2("second it", func() {
+							it2("second it", func(w *W) {
 							})
 						})
 
 						// unit under test
 						describe2("testing another describe", func() {
-							it2("third it", func() {
+							it2("third it", func(w *W) {
 							})
-							it2("forth it", func() {
+							it2("forth it", func(w *W) {
 							})
 						})
 					})
 				})
-				it("should have empty stack", func() {
+				it("should have empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have 4 suites with just 2 steps defined in each", func() {
+				it("should have 4 suites with just 2 steps defined in each", func(w *W) {
 					assert.Equal(t, 4, len(s2.suites))
 					assert.Equal(t, 2, len(s2.suites[0]))
 					assert.Equal(t, "testing describe/first it", buildSuiteTitle(s2.suites[0]))
@@ -303,19 +303,19 @@ func TestIt(t *testing.T) { //nolint:maintidx
 			})
 			context("with a more complex example", func() {
 				var s2 *SpecSuite
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, _, it2 := s2.API()
 
 						// unit under test
 						describe2("testing describe", func() {
-							it2("first it", func() {
+							it2("first it", func(w *W) {
 							})
-							it2("second it", func() {
+							it2("second it", func(w *W) {
 							})
 							describe2("testing nested context", func() {
-								it2("third it", func() {
+								it2("third it", func(w *W) {
 								})
 								describe2("testing nested empty context", func() {
 								})
@@ -323,10 +323,10 @@ func TestIt(t *testing.T) { //nolint:maintidx
 						})
 					})
 				})
-				it("should have empty stack", func() {
+				it("should have empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have 4 suites with just 2 steps defined in each", func() {
+				it("should have 4 suites with just 2 steps defined in each", func(w *W) {
 					assert.Equal(t, 4, len(s2.suites))
 					assert.Equal(t, 2, len(s2.suites[0]))
 					assert.Equal(t, "testing describe/first it", buildSuiteTitle(s2.suites[0]))
@@ -340,7 +340,7 @@ func TestIt(t *testing.T) { //nolint:maintidx
 			})
 			context("with an even more complex example", func() {
 				var s2 *SpecSuite
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 
@@ -353,20 +353,20 @@ func TestIt(t *testing.T) { //nolint:maintidx
 								var cart []string
 								var appliedCoupons []string
 
-								beforeEach2(func() {
+								beforeEach2(func(w *W) {
 									cart = []string{"Gopher toy"}
 								})
-								it2("should have 1 item in the cart", func() {
+								it2("should have 1 item in the cart", func(w *W) {
 									assert.Equal(t, 1, len(cart))
 								})
-								it2("should have no coupon applied by default", func() {
+								it2("should have no coupon applied by default", func(w *W) {
 									assert.Equal(t, 0, len(appliedCoupons))
 								})
 								context2("when we add one more item to the cart", func() {
-									beforeEach2(func() {
+									beforeEach2(func(w *W) {
 										cart = append(cart, "Crab toy")
 									})
-									it2("should have 2 items in the cart", func() {
+									it2("should have 2 items in the cart", func(w *W) {
 										assert.Equal(t, 2, len(cart))
 									})
 									context2("when the coupon is eligible for this purchase", func() {
@@ -375,7 +375,7 @@ func TestIt(t *testing.T) { //nolint:maintidx
 												// ..
 											})
 											context2("and the coupon value is less than the purchase value", func() {
-												beforeEach2(func() {
+												beforeEach2(func(w *W) {
 													// ..
 												})
 												describe2("when completing the purchase", func() {
@@ -388,7 +388,7 @@ func TestIt(t *testing.T) { //nolint:maintidx
 							})
 							context2("when shopping cart is empty", func() {
 								var cart []string
-								it2("should have 0 items", func() {
+								it2("should have 0 items", func(w *W) {
 									assert.Equal(t, 0, len(cart))
 								})
 							})
@@ -397,20 +397,20 @@ func TestIt(t *testing.T) { //nolint:maintidx
 						describe2("Sign Up", func() {
 							var signedUp bool
 							context2("when the user signs up", func() {
-								beforeEach2(func() {
+								beforeEach2(func(w *W) {
 									signedUp = true
 								})
-								it2("should be signed up", func() {
+								it2("should be signed up", func(w *W) {
 									assert.Equal(t, true, signedUp)
 								})
 							})
 						})
 					})
 				})
-				it("should have an empty stack", func() {
+				it("should have an empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have 4 suites with just 2 steps defined in each", func() {
+				it("should have 4 suites with just 2 steps defined in each", func(w *W) {
 					assert.Equal(t, 7, len(s2.suites))
 					assert.Equal(t, 4, len(s2.suites[0]))
 					assert.Equal(t, "Checkout/when shopping cart has 1 item/should have 1 item in the cart", buildSuiteTitle(s2.suites[0]))
@@ -431,7 +431,7 @@ func TestIt(t *testing.T) { //nolint:maintidx
 
 			context("with another even more complex example", func() {
 				var s2 *SpecSuite
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					WithSpecSuite(t, func(s *SpecSuite) {
 						s2 = s
 						describe2, beforeEach2, it2 := s2.API()
@@ -440,24 +440,24 @@ func TestIt(t *testing.T) { //nolint:maintidx
 						// unit under test
 						describe2("1", func() {
 							context2("1.1", func() {
-								beforeEach2(func() {
+								beforeEach2(func(w *W) {
 								})
-								it2("1.1.1", func() {
+								it2("1.1.1", func(w *W) {
 								})
 							})
 							context2("1.2", func() {
-								beforeEach2(func() {
+								beforeEach2(func(w *W) {
 								})
-								it2("1.2.1", func() {
+								it2("1.2.1", func(w *W) {
 								})
 							})
 						})
 					})
 				})
-				it("should have empty stack", func() {
+				it("should have empty stack", func(w *W) {
 					assert.Equal(t, 0, len(s2.stack))
 				})
-				it("should have 4 suites with just 2 steps defined in each", func() {
+				it("should have 4 suites with just 2 steps defined in each", func(w *W) {
 					assert.Equal(t, 2, len(s2.suites))
 					assert.Equal(t, 4, len(s2.suites[0]))
 					assert.Equal(t, "1/1.1/1.1.1", buildSuiteTitle(s2.suites[0]))
@@ -486,7 +486,7 @@ func TestUsingTestTable(t *testing.T) {
 
 			for _, tc := range testCases {
 				tc := tc
-				it(fmt.Sprintf("should be %v when %v == %v", tc.expected, tc.left, tc.right), func() {
+				it(fmt.Sprintf("should be %v when %v == %v", tc.expected, tc.left, tc.right), func(w *W) {
 					assert.Equal(t, tc.expected, tc.left == tc.right)
 				})
 			}

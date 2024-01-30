@@ -10,9 +10,11 @@ import (
 	"testing"
 )
 
-type Describe func(title string, cb any)
-type BeforeEach func(cb any)
-type It func(title string, cb any)
+type W = World
+
+type Describe func(title string, cb func())
+type BeforeEach func(cb func(w *World))
+type It func(title string, cb func(w *World))
 
 // SpecSuite is a spec suite which follows the rspec syntax, i.e.
 // describe, beforeEach, it blocks, etc. It has several methods
@@ -66,7 +68,7 @@ var (
 )
 
 type step struct {
-	t        *testing.T
+	//t        *testing.T
 	indent   int
 	block    block
 	title    string
@@ -76,7 +78,8 @@ type step struct {
 	failed   bool
 	failedAt int
 	executed bool
-	cb       any
+	cb       func(w *World)
+	cb2      func()
 	done     func()
 }
 
@@ -203,10 +206,10 @@ func (suite *SpecSuite) start() {
 				}
 			}
 
-			if suite.parallel {
-				world := newWorld()
-				world.T = t
+			world := newWorld()
+			world.T = t
 
+			if suite.parallel {
 				t.Parallel()
 				for _, s := range suite2 {
 					if s.block == isIt || s.block == isBeforeEach {
@@ -215,22 +218,27 @@ func (suite *SpecSuite) start() {
 								suite.wg.Done()
 							}
 						}
-						s.cb.(func(w *World))(world)
+						s.cb(world)
 						continue
 					}
-					if s.cb != nil {
-						s.cb.(func())()
+					if s.cb2 != nil {
+						s.cb2()
 					}
 				}
+				// suite.wg.Done() // TODO: perhaps just call this here ??
 				return
 			}
 
 			for _, s := range suite2 {
 				if s.cb != nil {
 					if s.block == isIt || s.block == isBeforeEach {
-						s.t = t
+						//s.t = t
+						s.cb(world)
+						continue
 					}
-					s.cb.(func())()
+				}
+				if s.cb2 != nil {
+					s.cb2()
 				}
 			}
 		})
@@ -373,7 +381,7 @@ func (suite *SpecSuite) findIndexOfNode(n *node) int {
 // expected or advised since it would lead to undefined behaviour or race conditions.
 // In those cases, just use the [World] construct which would get passed to
 // all [SpecSuite.BeforeEach] and [SpecSuite.It] function calls.
-func (suite *SpecSuite) describe(title string, cb any) {
+func (suite *SpecSuite) describe(title string, cb func()) {
 	suite.t.Helper()
 
 	// TODO: add checks for order of blocks
@@ -413,7 +421,7 @@ func (suite *SpecSuite) describe(title string, cb any) {
 	suite.pushStack(s)
 	suite.pushStack2(n)
 
-	cb.(func())()
+	cb()
 
 	suite.indent--
 
@@ -464,7 +472,7 @@ func (suite *SpecSuite) lastSuiteContainsStep(step *step) bool {
 // It is used for assigning values to variables which are then used in the following
 // blocks. If the [SpecSuite.BeforeEach] block is not followed by a [SpecSuite.It] block, it
 // will not get executed.
-func (suite *SpecSuite) beforeEach(cb any) {
+func (suite *SpecSuite) beforeEach(cb func(*World)) {
 	suite.t.Helper()
 
 	s := &step{
@@ -478,7 +486,7 @@ func (suite *SpecSuite) beforeEach(cb any) {
 
 // It defines a block which gets executed in a test suite as the last step. [SpecSuite.It] blocks
 // can not be nested.
-func (suite *SpecSuite) it(title string, cb any) {
+func (suite *SpecSuite) it(title string, cb func(w *World)) {
 	suite.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -504,34 +512,52 @@ func (suite *SpecSuite) it(title string, cb any) {
 
 	suite.currNode.children = append(suite.currNode.children, n)
 
-	if suite.parallel {
-		s.cb = func(w *World) {
-			w.T.Helper()
+	s.cb = func(w *World) {
+		w.T.Helper()
 
+		if suite.parallel {
 			defer s.done()
-
-			cb.(func(*World))(w)
-			s.executed = true
-
-			if w.T.Failed() {
-				s.failed = true
-				suite.failedCount++
-				s.failedAt = suite.failedCount
-			}
 		}
-	} else {
-		s.cb = func() {
-			suite.t.Helper()
-			cb.(func())()
-			s.executed = true
 
-			if suite.t.Failed() {
-				s.failed = true
-				suite.failedCount++
-				s.failedAt = suite.failedCount
-			}
+		cb(w)
+
+		s.executed = true
+
+		if w.T.Failed() {
+			s.failed = true
+			suite.failedCount++
+			s.failedAt = suite.failedCount
 		}
 	}
+
+	//if suite.parallel {
+	//	s.cb = func(w *World) {
+	//		w.T.Helper()
+	//
+	//		defer s.done()
+	//
+	//		cb(w)
+	//		s.executed = true
+	//
+	//		if w.T.Failed() {
+	//			s.failed = true
+	//			suite.failedCount++
+	//			s.failedAt = suite.failedCount
+	//		}
+	//	}
+	//} else {
+	//	s.cb = func(w *World) {
+	//		suite.t.Helper()
+	//		cb(w)
+	//		s.executed = true
+	//
+	//		if suite.t.Failed() {
+	//			s.failed = true
+	//			suite.failedCount++
+	//			s.failedAt = suite.failedCount
+	//		}
+	//	}
+	//}
 
 	suite.pushStack(s)
 

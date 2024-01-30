@@ -267,13 +267,13 @@ func TestDescribesWithBeforeEach(t *testing.T) {
 			describe, beforeEach, _ := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				beforeEach(func() {})
+				beforeEach(func(w *W) {})
 				describe("nested 1", func() {})
 				describe("nested 2", func() {})
 			})
 
 			describe("describe 2", func() {
-				beforeEach(func() {})
+				beforeEach(func(w *W) {})
 				describe("nested 3", func() {})
 				describe("nested 4", func() {})
 			})
@@ -316,7 +316,7 @@ func TestSingleDescribeWithSingleItBlock(t *testing.T) {
 			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func() {})
+				it("it 1", func(w *W) {})
 			})
 		})
 	}()
@@ -350,8 +350,8 @@ func TestSingleDescribeWithTwoItBlocks(t *testing.T) {
 			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func() {})
-				it("it 2", func() {})
+				it("it 1", func(w *W) {})
+				it("it 2", func(w *W) {})
 			})
 		})
 	}()
@@ -389,13 +389,13 @@ func TestTwoDescribeBlocksWithTwoItBlocks(t *testing.T) {
 			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func() {})
-				it("it 2", func() {})
+				it("it 1", func(w *W) {})
+				it("it 2", func(w *W) {})
 			})
 
 			describe("describe 2", func() {
-				it("it 3", func() {})
-				it("it 4", func() {})
+				it("it 3", func(w *W) {})
+				it("it 4", func(w *W) {})
 			})
 		})
 	}()
@@ -448,19 +448,19 @@ func TestTwoDescribeBlocksWithBothNestedDescribesAndItBlocks(t *testing.T) {
 			describe, beforeEach, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func() {})
-				it("it 2", func() {})
+				it("it 1", func(w *W) {})
+				it("it 2", func(w *W) {})
 
 				describe("describe 2", func() {
-					beforeEach(func() {})
-					it("it 3", func() {})
-					it("it 4", func() {})
+					beforeEach(func(w *W) {})
+					it("it 3", func(w *W) {})
+					it("it 4", func(w *W) {})
 				})
 			})
 
 			describe("describe 3", func() {
-				it("it 5", func() {})
-				it("it 6", func() {})
+				it("it 5", func(w *W) {})
+				it("it 6", func(w *W) {})
 			})
 		})
 	}()
@@ -531,22 +531,22 @@ func TestSequentialExecution(t *testing.T) {
 			describe("describe 1", func() {
 				var nums []int
 
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					nums = []int{}
 					nums = append(nums, 1)
 				})
 
 				describe("describe 2", func() {
-					beforeEach(func() {
+					beforeEach(func(w *W) {
 						nums = append(nums, 2)
 					})
 
-					it("it 1", func() {
+					it("it 1", func(w *W) {
 						nums = append(nums, 3)
 						mockAssert.Assert(nums)
 					})
 
-					it("it 2", func() {
+					it("it 2", func(w *W) {
 						nums = append(nums, 4)
 						mockAssert.Assert(nums)
 					})
@@ -556,22 +556,22 @@ func TestSequentialExecution(t *testing.T) {
 			describe("describe 3", func() {
 				var nums []int
 
-				beforeEach(func() {
+				beforeEach(func(w *W) {
 					nums = []int{}
 					nums = append(nums, 11)
 				})
 
 				describe("describe 4", func() {
-					beforeEach(func() {
+					beforeEach(func(w *W) {
 						nums = append(nums, 12)
 					})
 
-					it("it 3", func() {
+					it("it 3", func(w *W) {
 						nums = append(nums, 13)
 						mockAssert.Assert(nums)
 					})
 
-					it("it 4", func() {
+					it("it 4", func(w *W) {
 						nums = append(nums, 14)
 						mockAssert.Assert(nums)
 					})
@@ -845,20 +845,25 @@ func TestFailedTestSuitesWithFirstSuiteFailing(t *testing.T) {
 			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func() {
-					tm.Errorf("fail 1")
+				it("it 1", func(w *W) {
+					w.T.Skip()
 				})
-				it("it 2", func() {})
+				it("it 2", func(w *W) {})
 			})
 
 			describe("describe 2", func() {
-				it("it 3", func() {})
-				it("it 4", func() {})
+				it("it 3", func(w *W) {})
+				it("it 4", func(w *W) {})
 			})
 		})
 	}()
 
-	assert.Equal(t, [][]any{{"fail 1"}}, tm.calls)
+	assert.Equal(t, 4, len(tm.childMocks))
+	assert.Equal(t, true, tm.childMocks[0].t.Skipped())
+	assert.Equal(t, false, tm.childMocks[1].t.Skipped())
+	assert.Equal(t, false, tm.childMocks[2].t.Skipped())
+	assert.Equal(t, false, tm.childMocks[3].t.Skipped())
+	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{
 		"describe 1/it 1",
 		"describe 1/it 2",
@@ -881,12 +886,12 @@ func TestFailedTestSuitesWithFirstSuiteFailing(t *testing.T) {
 	assert.Equal(t, "it 4", spec.suites[3][1].title)
 	assert.Equal(t, strings.Join([]string{
 		`describe 1`,
-		`	⨯ it 1`,
-		`	s it 2`,
+		`	s it 1`,
+		`	✔ it 2`,
 		``,
 		`describe 2`,
-		`	s it 3`,
-		`	s it 4`,
+		`	✔ it 3`,
+		`	✔ it 4`,
 		``,
 		``,
 	}, "\n"), out.String())
@@ -906,20 +911,20 @@ func TestFailedTestSuitesWithLastSuiteFailing(t *testing.T) {
 			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func() {})
-				it("it 2", func() {})
+				it("it 1", func(w *W) {})
+				it("it 2", func(w *W) {})
 			})
 
 			describe("describe 2", func() {
-				it("it 3", func() {})
-				it("it 4", func() {
-					s.t.Errorf("fail 4")
+				it("it 3", func(w *W) {})
+				it("it 4", func(w *W) {
+					w.T.Skip()
 				})
 			})
 		})
 	}()
 
-	assert.Equal(t, [][]any{{"fail 4"}}, tm.calls)
+	assert.Equal(t, [][]any(nil), tm.calls)
 	assert.Equal(t, []string{
 		"describe 1/it 1",
 		"describe 1/it 2",
@@ -947,7 +952,7 @@ func TestFailedTestSuitesWithLastSuiteFailing(t *testing.T) {
 		``,
 		`describe 2`,
 		`	✔ it 3`,
-		`	⨯ it 4`,
+		`	s it 4`,
 		``,
 		``,
 	}, "\n"), out.String())

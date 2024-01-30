@@ -23,13 +23,13 @@ func TestSuiteWithPrintedFilenames(t *testing.T) {
 			describe, _, it := s.With(Output(&out), PrintedFilenames()).API()
 
 			describe("describe 1", func() {
-				it("it 1", func() {})
-				it("it 2", func() {})
+				it("it 1", func(w *W) {})
+				it("it 2", func(w *W) {})
 			})
 
 			describe("describe 2", func() {
-				it("it 3", func() {})
-				it("it 4", func() {})
+				it("it 3", func(w *W) {})
+				it("it 4", func(w *W) {})
 			})
 		})
 	}()

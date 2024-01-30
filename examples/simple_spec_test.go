@@ -7,6 +7,8 @@ import (
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
 
+type W = gospec.W
+
 func TestSimpleSpec(t *testing.T) {
 	gospec.WithSpecSuite(t, func(s *gospec.SpecSuite) {
 		describe, beforeEach, it := s.API()
@@ -14,7 +16,7 @@ func TestSimpleSpec(t *testing.T) {
 		describe("Cart", func() {
 			var cart []string
 
-			beforeEach(func() {
+			beforeEach(func(w *W) {
 				cart = []string{
 					"Gopher Toy",
 					"Crab Toy",
@@ -23,16 +25,16 @@ func TestSimpleSpec(t *testing.T) {
 
 			describe("cart updates", func() {
 				describe("given a new item has already been added", func() {
-					beforeEach(func() {
+					beforeEach(func(w *W) {
 						cart = append(cart, "Lizard toy")
 					})
 
 					describe("when we remove the second item", func() {
-						beforeEach(func() {
+						beforeEach(func(w *W) {
 							cart = []string{cart[0], cart[2]}
 						})
 
-						it("then the cart should contain the correct two items", func() {
+						it("then the cart should contain the correct two items", func(w *gospec.World) {
 							assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, cart)
 						})
 					})
@@ -41,16 +43,16 @@ func TestSimpleSpec(t *testing.T) {
 
 			describe("removing items from the cart", func() {
 				describe("given the second item has already been removed", func() {
-					beforeEach(func() {
+					beforeEach(func(w *W) {
 						cart = cart[:1]
 					})
 
 					describe("when we remove the first item", func() {
-						beforeEach(func() {
+						beforeEach(func(w *W) {
 							cart = cart[:0]
 						})
 
-						it("then the cart should contain 0 items", func() {
+						it("then the cart should contain 0 items", func(w *W) {
 							assert.Equal(t, []string{}, cart)
 						})
 					})
