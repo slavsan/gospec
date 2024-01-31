@@ -565,8 +565,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 			feature("Checkout 1", func() {
 				background(func() {
 					given("given 1", func(t *T, w *World) {
-						var items []Product
-						items = []Product{
+						items := []Product{
 							{Name: "Gopher toy", Price: 1.99, Type: 10},
 							{Name: "Crab toy", Price: 2.49, Type: 12},
 						}

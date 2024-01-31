@@ -26,7 +26,7 @@ func newWorld() *World {
 	}
 }
 
-func (w *World) Table(fs *FeatureSuite, items any, columns ...string) {
+func (w *World) Table(fs *FeatureSuite, items any, columns ...string) { //nolint:gocognit,cyclop
 	w.t.Helper()
 
 	// TODO: validate table was called in valid call site

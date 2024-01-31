@@ -10,13 +10,22 @@ import (
 	"testing"
 )
 
+// W ...
 type W = World
 
+// Describe ..
 type Describe func(title string, cb func())
+
+// BeforeEach ..
 type BeforeEach func(cb func(t *testing.T))
+
+// It ..
 type It func(title string, cb func(t *testing.T))
 
+// ParallelBeforeEach ..
 type ParallelBeforeEach func(cb func(t *testing.T, w *World))
+
+// ParallelIt ..
 type ParallelIt func(title string, cb func(t *testing.T, w *World))
 
 // SpecSuite is a spec suite which follows the rspec syntax, i.e.
@@ -38,11 +47,12 @@ type SpecSuite struct {
 	currNode       *node
 	nodesStack     []*node
 	failedCount    int
-	calledDone     bool
 	wg             *sync.WaitGroup
 }
 
 func WithSpecSuite(t *testing.T, f func(s *SpecSuite)) {
+	t.Helper()
+
 	s := newTestSuite(t)
 
 	defer s.start2()
@@ -71,7 +81,6 @@ var (
 )
 
 type step struct {
-	//t        *testing.T
 	indent     int
 	block      block
 	title      string
@@ -83,7 +92,6 @@ type step struct {
 	executed   bool
 	cb         func(t *testing.T)
 	parallelCb func(t *testing.T, w *World)
-	cb2        func()
 	done       func()
 }
 
@@ -99,42 +107,23 @@ func newTestSuite(t *testing.T) *SpecSuite {
 	return suite
 }
 
-func (suite *SpecSuite) start2(onDone ...func()) {
-	if suite.parallel && len(onDone) > 1 {
-		suite.t.Errorf("invalid number of callbacks passed to start, expected 0 or 1, got %d", len(onDone))
+func (suite *SpecSuite) start2() {
+	if !suite.parallel {
+		suite.start()
+		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
 		return
 	}
-
-	// TODO: make sure start is not called twice
-	// TODO: detect start not called
-
-	if suite.calledDone {
-		panic("already calle done")
-	}
-
-	suite.calledDone = true
 
 	suite.wg = &sync.WaitGroup{}
 	suite.wg.Add(len(suite.suites[suite.atSuiteIndex:]))
 
-	// TODO: add some default timeout perhaps and an option to override it ???
-	// TODO: start and wait for all of the tasks to finish
-
 	suite.start()
-
-	if !suite.parallel {
-		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
-		return
-	}
 
 	go func() {
 		suite.wg.Wait()
 
 		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
 
-		if len(onDone) > 0 {
-			//onDone[0]()
-		}
 		if suite.done != nil {
 			suite.done()
 		}
@@ -195,22 +184,16 @@ func (suite *SpecSuite) ParallelAPI(done func()) (
 	return suite.describe, suite.parallelBeforeEach, suite.parallelIt
 }
 
-//func endsInItBlock(suite []*step) bool {
-//	if len(suite) == 0 {
-//		return false
-//	}
-//
-//	lastStep := suite[len(suite)-1]
-//
-//	return lastStep.block == isIt
-//}
+func (suite *SpecSuite) start() { //nolint:gocognit
+	suite.t.Helper()
 
-func (suite *SpecSuite) start() {
 	for i := suite.atSuiteIndex; i < len(suite.suites); i++ {
 		suite2 := suite.suites[i]
 		suite.atSuiteIndex++
 
 		suite.t.Run(buildSuiteTitle(suite2), func(t *testing.T) {
+			t.Helper()
+
 			// TODO: check if the last step is an `it` block, and if not, skip this test
 
 			if suite.t.Failed() {
@@ -235,9 +218,6 @@ func (suite *SpecSuite) start() {
 						s.parallelCb(t, world)
 						continue
 					}
-					if s.cb2 != nil {
-						s.cb2()
-					}
 				}
 				// suite.wg.Done() // TODO: perhaps just call this here ??
 				return
@@ -246,13 +226,9 @@ func (suite *SpecSuite) start() {
 			for _, s := range suite2 {
 				if s.cb != nil {
 					if s.block == isIt || s.block == isBeforeEach {
-						//s.t = t
 						s.cb(t)
 						continue
 					}
-				}
-				if s.cb2 != nil {
-					s.cb2()
 				}
 			}
 		})
@@ -409,9 +385,6 @@ func (suite *SpecSuite) describe(title string, cb func()) {
 	}
 
 	if suite.isTopLevel() {
-		// starting with a new top-level describe, so create a new router
-		//suite.report = strings.Builder{}
-
 		// top level, so the node should go at the suites level
 		suite.nodes = append(suite.nodes, n)
 	} else {

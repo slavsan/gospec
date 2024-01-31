@@ -22,71 +22,75 @@ func (t tree) String(suite *SpecSuite) string {
 }
 
 func (n *node) write(sb *strings.Builder, indent int, suite *SpecSuite) {
-	if !n.step.printed {
-		n.step.printed = true
-		if n.step.block == isIt {
-			if suite.printFilenames {
-				icon := "✔ "
-				if n.step.failed {
-					if n.step.failedAt == 1 {
-						icon = "⨯ "
-					} else {
-						icon = "s "
-					}
-				}
+	if n.step.printed {
+		return
+	}
 
-				sb.WriteString(
-					fmt.Sprintf("%s%s%s\t%s:%d\n",
-						strings.Repeat("\t", indent),
-						icon,
-						n.step.title,
-						strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
-					),
-				)
-			} else {
-				icon := "✔ "
+	n.step.printed = true
 
-				if !n.step.executed && n.step.failedAt == 0 {
+	icon := "✔ "
+
+	if n.step.block == isIt { //nolint:nestif
+		if suite.printFilenames {
+			if n.step.failed {
+				if n.step.failedAt == 1 {
+					icon = "⨯ "
+				} else {
 					icon = "s "
 				}
-
-				if n.step.failed {
-					if n.step.failedAt == 1 {
-						icon = "⨯ "
-					} else if n.step.failedAt == 0 {
-						// do nothing
-					} else {
-						icon = "s "
-					}
-				}
-
-				sb.WriteString(
-					fmt.Sprintf("%s%s%s\n",
-						strings.Repeat("\t", indent),
-						icon,
-						n.step.title,
-					),
-				)
 			}
-		} else {
-			if suite.printFilenames {
-				sb.WriteString(
-					fmt.Sprintf("%s%s\t%s:%d\n",
-						strings.Repeat("\t", indent),
-						n.step.title,
-						strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
-					),
-				)
-			} else {
-				sb.WriteString(
-					fmt.Sprintf("%s%s\n",
-						strings.Repeat("\t", indent),
-						n.step.title,
-					),
-				)
+
+			sb.WriteString(
+				fmt.Sprintf("%s%s%s\t%s:%d\n",
+					strings.Repeat("\t", indent),
+					icon,
+					n.step.title,
+					strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
+				),
+			)
+			return
+		}
+
+		if !n.step.executed && n.step.failedAt == 0 {
+			icon = "s "
+		}
+
+		if n.step.failed {
+			if n.step.failedAt == 1 {
+				icon = "⨯ "
+			} else if n.step.failedAt != 0 {
+				icon = "s "
 			}
 		}
+
+		sb.WriteString(
+			fmt.Sprintf("%s%s%s\n",
+				strings.Repeat("\t", indent),
+				icon,
+				n.step.title,
+			),
+		)
+
+		return
 	}
+
+	if suite.printFilenames {
+		sb.WriteString(
+			fmt.Sprintf("%s%s\t%s:%d\n",
+				strings.Repeat("\t", indent),
+				n.step.title,
+				strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
+			),
+		)
+	} else {
+		sb.WriteString(
+			fmt.Sprintf("%s%s\n",
+				strings.Repeat("\t", indent),
+				n.step.title,
+			),
+		)
+	}
+
 	for _, c := range n.children {
 		c.write(sb, indent+1, suite)
 	}

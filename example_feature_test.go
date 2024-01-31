@@ -13,8 +13,7 @@ import (
 // ExampleFeatureSuite shows an example gospec.FeatureSuite.
 func Example_featureSuite() {
 	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
-		feature, background, scenario, given, when, then, _ :=
-			s.With(gospec.PrintedFilenames()).API()
+		feature, background, scenario, given, when, then, _ := s.With(gospec.PrintedFilenames()).API()
 
 		feature("Cart", func() {
 			var cart []string

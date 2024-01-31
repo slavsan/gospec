@@ -25,16 +25,34 @@ const (
 	isTable
 )
 
+// Feature ..
 type Feature func(title string, cb func())
+
+// Background ..
 type Background func(cb func())
+
+// Scenario ..
 type Scenario func(title string, cb func())
+
+// Given ..
 type Given func(title string, cb func(*testing.T))
+
+// When ..
 type When func(title string, cb func(*testing.T))
+
+// Then ..
 type Then func(title string, cb func(*testing.T))
+
+// Table ..
 type Table func(items any, columns ...string)
 
+// ParallelGiven ..
 type ParallelGiven func(title string, cb func(*testing.T, *World))
+
+// ParallelWhen ..
 type ParallelWhen func(title string, cb func(*testing.T, *World))
+
+// ParallelThen ..
 type ParallelThen func(title string, cb func(*testing.T, *World))
 
 type featureStep struct {
@@ -49,8 +67,6 @@ type featureStep struct {
 	executed   bool
 	parallelCb func(*testing.T, *World)
 	cb         func(*testing.T)
-	cb2        func()
-	done       func()
 	n          *node2
 }
 
@@ -139,6 +155,7 @@ func (fs *FeatureSuite) API() (
 		fs.when, fs.then, fs.table
 }
 
+// ParallelAPI ...
 func (fs *FeatureSuite) ParallelAPI(done func()) (
 	Feature,
 	Background,
@@ -162,6 +179,8 @@ func (fs *FeatureSuite) prevKind() featureStepKind {
 }
 
 func WithFeatureSuite(t *testing.T, f func(fs *FeatureSuite)) {
+	t.Helper()
+
 	fs := newFeatureSuite(t)
 
 	defer fs.start()
@@ -440,8 +459,6 @@ func (fs *FeatureSuite) scenario(title string, cb func()) {
 	fs.popStack(s)
 }
 
-type StepCallback func(*testing.T)
-
 // Given defines a block which is meant to build the prerequisites for a particular
 // test. It's usual to have any test setup logic defined in a [FeatureSuite.Given]
 // block.
@@ -461,7 +478,6 @@ func (fs *FeatureSuite) given(title string, cb func(*testing.T)) {
 		title:  title,
 		lineNo: lineNo,
 		file:   file,
-		//cb:     cb,
 	}
 
 	s.cb = func(t *testing.T) {
@@ -510,13 +526,13 @@ func (fs *FeatureSuite) parallelGiven(title string, cb func(*testing.T, *World))
 		w.t.Helper()
 
 		cb(t, w)
-		//s.executed = true
+		// s.executed = true
 
-		if w.t.Failed() {
-			//s.failed = true
-			//fs.failedCount++
-			//s.failedAt = fs.failedCount
-		}
+		// if w.t.Failed() {
+		// 	//s.failed = true
+		// 	//fs.failedCount++
+		// 	//s.failedAt = fs.failedCount
+		// }
 	}
 
 	n.step = s
@@ -737,7 +753,7 @@ func (fs *FeatureSuite) table(items any, columns ...string) { //nolint:gocognit,
 	}
 	sb.WriteString("\t\t\t|")
 	for _, c := range columns {
-		sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", c))
+		sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", c)) //nolint:goconst
 		sb.WriteString("|")
 	}
 	sb.WriteString("\n")
@@ -786,7 +802,7 @@ func (fs *FeatureSuite) With(options ...SuiteOption) *FeatureSuite {
 	return fs
 }
 
-func (fs *FeatureSuite) start() {
+func (fs *FeatureSuite) start() { //nolint:cyclop,gocognit
 	fs.wg = &sync.WaitGroup{}
 	fs.wg.Add(len(fs.suites))
 	for i := fs.atSuiteIndex; i < len(fs.suites); i++ {
@@ -799,7 +815,7 @@ func (fs *FeatureSuite) start() {
 				if fs.parallel {
 					fs.wg.Done()
 				}
-				//t.Skip()
+				// t.Skip()
 			}
 
 			world := newWorld()
@@ -809,9 +825,9 @@ func (fs *FeatureSuite) start() {
 				t.Parallel()
 				for _, s := range suite {
 					if s.kind == isGiven || s.kind == isWhen || s.kind == isThen {
-						//s.done = func() {
-						//	fs.wg.Done()
-						//}
+						// s.done = func() {
+						// 	fs.wg.Done()
+						// }
 
 						world.currentFeatureStep = s
 
@@ -820,9 +836,6 @@ func (fs *FeatureSuite) start() {
 						world.currentFeatureStep = nil
 
 						continue
-					}
-					if s.cb2 != nil {
-						s.cb2()
 					}
 				}
 				fs.wg.Done()
