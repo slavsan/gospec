@@ -13,8 +13,11 @@ import (
 type W = World
 
 type Describe func(title string, cb func())
-type BeforeEach func(cb func(t *testing.T, w *World))
-type It func(title string, cb func(t *testing.T, w *World))
+type BeforeEach func(cb func(t *testing.T))
+type It func(title string, cb func(t *testing.T))
+
+type ParallelBeforeEach func(cb func(t *testing.T, w *World))
+type ParallelIt func(title string, cb func(t *testing.T, w *World))
 
 // SpecSuite is a spec suite which follows the rspec syntax, i.e.
 // describe, beforeEach, it blocks, etc. It has several methods
@@ -69,18 +72,19 @@ var (
 
 type step struct {
 	//t        *testing.T
-	indent   int
-	block    block
-	title    string
-	printed  bool
-	file     string
-	lineNo   int
-	failed   bool
-	failedAt int
-	executed bool
-	cb       func(t *testing.T, w *World)
-	cb2      func()
-	done     func()
+	indent     int
+	block      block
+	title      string
+	printed    bool
+	file       string
+	lineNo     int
+	failed     bool
+	failedAt   int
+	executed   bool
+	cb         func(t *testing.T)
+	parallelCb func(t *testing.T, w *World)
+	cb2        func()
+	done       func()
 }
 
 // NewTestSuite creates a new instance of SpecSuite.
@@ -181,6 +185,16 @@ func (suite *SpecSuite) API() (
 	return suite.describe, suite.beforeEach, suite.it
 }
 
+func (suite *SpecSuite) ParallelAPI(done func()) (
+	Describe,
+	ParallelBeforeEach,
+	ParallelIt,
+) {
+	suite.parallel = true
+	suite.done = done
+	return suite.describe, suite.parallelBeforeEach, suite.parallelIt
+}
+
 //func endsInItBlock(suite []*step) bool {
 //	if len(suite) == 0 {
 //		return false
@@ -218,7 +232,7 @@ func (suite *SpecSuite) start() {
 								suite.wg.Done()
 							}
 						}
-						s.cb(t, world)
+						s.parallelCb(t, world)
 						continue
 					}
 					if s.cb2 != nil {
@@ -233,7 +247,7 @@ func (suite *SpecSuite) start() {
 				if s.cb != nil {
 					if s.block == isIt || s.block == isBeforeEach {
 						//s.t = t
-						s.cb(t, world)
+						s.cb(t)
 						continue
 					}
 				}
@@ -472,7 +486,19 @@ func (suite *SpecSuite) lastSuiteContainsStep(step *step) bool {
 // It is used for assigning values to variables which are then used in the following
 // blocks. If the [SpecSuite.BeforeEach] block is not followed by a [SpecSuite.It] block, it
 // will not get executed.
-func (suite *SpecSuite) beforeEach(cb func(*testing.T, *World)) {
+func (suite *SpecSuite) parallelBeforeEach(cb func(*testing.T, *World)) {
+	suite.t.Helper()
+
+	s := &step{
+		indent:     suite.indent,
+		block:      isBeforeEach,
+		parallelCb: cb,
+	}
+
+	suite.pushStack(s)
+}
+
+func (suite *SpecSuite) beforeEach(cb func(*testing.T)) {
 	suite.t.Helper()
 
 	s := &step{
@@ -486,7 +512,7 @@ func (suite *SpecSuite) beforeEach(cb func(*testing.T, *World)) {
 
 // It defines a block which gets executed in a test suite as the last step. [SpecSuite.It] blocks
 // can not be nested.
-func (suite *SpecSuite) it(title string, cb func(t *testing.T, w *World)) {
+func (suite *SpecSuite) parallelIt(title string, cb func(t *testing.T, w *World)) {
 	suite.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -512,7 +538,7 @@ func (suite *SpecSuite) it(title string, cb func(t *testing.T, w *World)) {
 
 	suite.currNode.children = append(suite.currNode.children, n)
 
-	s.cb = func(t *testing.T, w *World) {
+	s.parallelCb = func(t *testing.T, w *World) {
 		w.t.Helper()
 
 		if suite.parallel {
@@ -530,34 +556,58 @@ func (suite *SpecSuite) it(title string, cb func(t *testing.T, w *World)) {
 		}
 	}
 
-	//if suite.parallel {
-	//	s.cb = func(w *World) {
-	//		w.T.Helper()
-	//
-	//		defer s.done()
-	//
-	//		cb(w)
-	//		s.executed = true
-	//
-	//		if w.T.Failed() {
-	//			s.failed = true
-	//			suite.failedCount++
-	//			s.failedAt = suite.failedCount
-	//		}
-	//	}
-	//} else {
-	//	s.cb = func(w *World) {
-	//		suite.t.Helper()
-	//		cb(w)
-	//		s.executed = true
-	//
-	//		if suite.t.Failed() {
-	//			s.failed = true
-	//			suite.failedCount++
-	//			s.failedAt = suite.failedCount
-	//		}
-	//	}
-	//}
+	suite.pushStack(s)
+
+	if len(suite.stack) > 0 {
+		suite.copyStack()
+	}
+
+	suite.popStack(s)
+}
+
+func (suite *SpecSuite) it(title string, cb func(t *testing.T)) {
+	suite.t.Helper()
+
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	// TODO: check if parallel and make sure `cb` is defined with *World as the first arg
+
+	n := &node{
+		// ..
+	}
+
+	s := &step{
+		title:  title,
+		indent: suite.indent,
+		block:  isIt,
+		file:   file,
+		lineNo: lineNo,
+		cb:     nil,
+	}
+
+	n.step = s
+
+	suite.currNode.children = append(suite.currNode.children, n)
+
+	s.cb = func(t *testing.T) {
+		t.Helper()
+
+		if suite.parallel {
+			defer s.done()
+		}
+
+		cb(t)
+
+		s.executed = true
+
+		if t.Failed() {
+			s.failed = true
+			suite.failedCount++
+			s.failedAt = suite.failedCount
+		}
+	}
 
 	suite.pushStack(s)
 
@@ -585,11 +635,6 @@ func (suite *SpecSuite) setOutput(w io.Writer) {
 
 func (suite *SpecSuite) setPrintFilenames() {
 	suite.printFilenames = true
-}
-
-func (suite *SpecSuite) setParallel(done func()) {
-	suite.parallel = true
-	suite.done = done
 }
 
 func getBasePath() string {

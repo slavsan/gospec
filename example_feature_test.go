@@ -20,7 +20,7 @@ func Example_featureSuite() {
 			var cart []string
 
 			background(func() {
-				given("there is a cart with three items", func(t *testing.T, w *gospec.World) {
+				given("there is a cart with three items", func(t *testing.T) {
 					cart = []string{
 						"Gopher Toy",
 						"Crab Toy",
@@ -29,25 +29,25 @@ func Example_featureSuite() {
 			})
 
 			scenario("cart updates", func() {
-				given("a new item has already been added", func(t *testing.T, w *gospec.World) {
+				given("a new item has already been added", func(t *testing.T) {
 					cart = append(cart, "Lizard toy")
 				})
-				when("we remove the second item", func(t *testing.T, w *gospec.World) {
+				when("we remove the second item", func(t *testing.T) {
 					cart = []string{cart[0], cart[2]}
 				})
-				then("the cart should contain the correct two items", func(t *testing.T, w *gospec.World) {
+				then("the cart should contain the correct two items", func(t *testing.T) {
 					assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, cart)
 				})
 			})
 
 			scenario("removing items from the cart", func() {
-				given("the second item has already been removed", func(t *testing.T, w *gospec.World) {
+				given("the second item has already been removed", func(t *testing.T) {
 					cart = cart[:1]
 				})
-				when("we remove the first item", func(t *testing.T, w *gospec.World) {
+				when("we remove the first item", func(t *testing.T) {
 					cart = cart[:0]
 				})
-				then("the cart should contain 0 items", func(t *testing.T, w *gospec.World) {
+				then("the cart should contain 0 items", func(t *testing.T) {
 					assert.Equal(t, []string{}, cart)
 				})
 			})

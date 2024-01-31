@@ -269,13 +269,13 @@ func TestDescribesWithBeforeEach(t *testing.T) {
 			describe, beforeEach, _ := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				beforeEach(func(t *T, w *W) {})
+				beforeEach(func(t *T) {})
 				describe("nested 1", func() {})
 				describe("nested 2", func() {})
 			})
 
 			describe("describe 2", func() {
-				beforeEach(func(t *T, w *W) {})
+				beforeEach(func(t *T) {})
 				describe("nested 3", func() {})
 				describe("nested 4", func() {})
 			})
@@ -318,7 +318,7 @@ func TestSingleDescribeWithSingleItBlock(t *testing.T) {
 			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func(t *T, w *W) {})
+				it("it 1", func(t *T) {})
 			})
 		})
 	}()
@@ -352,8 +352,8 @@ func TestSingleDescribeWithTwoItBlocks(t *testing.T) {
 			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func(t *T, w *W) {})
-				it("it 2", func(t *T, w *W) {})
+				it("it 1", func(t *T) {})
+				it("it 2", func(t *T) {})
 			})
 		})
 	}()
@@ -391,13 +391,13 @@ func TestTwoDescribeBlocksWithTwoItBlocks(t *testing.T) {
 			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func(t *T, w *W) {})
-				it("it 2", func(t *T, w *W) {})
+				it("it 1", func(t *T) {})
+				it("it 2", func(t *T) {})
 			})
 
 			describe("describe 2", func() {
-				it("it 3", func(t *T, w *W) {})
-				it("it 4", func(t *T, w *W) {})
+				it("it 3", func(t *T) {})
+				it("it 4", func(t *T) {})
 			})
 		})
 	}()
@@ -450,19 +450,19 @@ func TestTwoDescribeBlocksWithBothNestedDescribesAndItBlocks(t *testing.T) {
 			describe, beforeEach, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func(t *T, w *W) {})
-				it("it 2", func(t *T, w *W) {})
+				it("it 1", func(t *T) {})
+				it("it 2", func(t *T) {})
 
 				describe("describe 2", func() {
-					beforeEach(func(t *T, w *W) {})
-					it("it 3", func(t *T, w *W) {})
-					it("it 4", func(t *T, w *W) {})
+					beforeEach(func(t *T) {})
+					it("it 3", func(t *T) {})
+					it("it 4", func(t *T) {})
 				})
 			})
 
 			describe("describe 3", func() {
-				it("it 5", func(t *T, w *W) {})
-				it("it 6", func(t *T, w *W) {})
+				it("it 5", func(t *T) {})
+				it("it 6", func(t *T) {})
 			})
 		})
 	}()
@@ -533,22 +533,22 @@ func TestSequentialExecution(t *testing.T) {
 			describe("describe 1", func() {
 				var nums []int
 
-				beforeEach(func(t *T, w *W) {
+				beforeEach(func(t *T) {
 					nums = []int{}
 					nums = append(nums, 1)
 				})
 
 				describe("describe 2", func() {
-					beforeEach(func(t *T, w *W) {
+					beforeEach(func(t *T) {
 						nums = append(nums, 2)
 					})
 
-					it("it 1", func(t *T, w *W) {
+					it("it 1", func(t *T) {
 						nums = append(nums, 3)
 						mockAssert.Assert(nums)
 					})
 
-					it("it 2", func(t *T, w *W) {
+					it("it 2", func(t *T) {
 						nums = append(nums, 4)
 						mockAssert.Assert(nums)
 					})
@@ -558,22 +558,22 @@ func TestSequentialExecution(t *testing.T) {
 			describe("describe 3", func() {
 				var nums []int
 
-				beforeEach(func(t *T, w *W) {
+				beforeEach(func(t *T) {
 					nums = []int{}
 					nums = append(nums, 11)
 				})
 
 				describe("describe 4", func() {
-					beforeEach(func(t *T, w *W) {
+					beforeEach(func(t *T) {
 						nums = append(nums, 12)
 					})
 
-					it("it 3", func(t *T, w *W) {
+					it("it 3", func(t *T) {
 						nums = append(nums, 13)
 						mockAssert.Assert(nums)
 					})
 
-					it("it 4", func(t *T, w *W) {
+					it("it 4", func(t *T) {
 						nums = append(nums, 14)
 						mockAssert.Assert(nums)
 					})
@@ -624,7 +624,7 @@ func TestSpecSuitesGetExecutedInParallel(t *testing.T) {
 	t.Run("run parallel tests", func(t *testing.T) {
 		WithSpecSuite(t, func(s *SpecSuite) {
 			s.t = testingMock
-			describe, beforeEach, it := s.With(Output(&out), Parallel(func() { close(done) })).API()
+			describe, beforeEach, it := s.With(Output(&out)).ParallelAPI(func() { close(done) })
 
 			describe("Checkout 1", func() {
 				describe("given 1", func() {
@@ -847,15 +847,15 @@ func TestFailedTestSuitesWithFirstSuiteFailing(t *testing.T) {
 			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func(t *T, w *W) {
-					w.t.Skip()
+				it("it 1", func(t *T) {
+					t.Skip()
 				})
-				it("it 2", func(t *T, w *W) {})
+				it("it 2", func(t *T) {})
 			})
 
 			describe("describe 2", func() {
-				it("it 3", func(t *T, w *W) {})
-				it("it 4", func(t *T, w *W) {})
+				it("it 3", func(t *T) {})
+				it("it 4", func(t *T) {})
 			})
 		})
 	}()
@@ -913,14 +913,14 @@ func TestFailedTestSuitesWithLastSuiteFailing(t *testing.T) {
 			describe, _, it := s.With(Output(&out)).API()
 
 			describe("describe 1", func() {
-				it("it 1", func(t *T, w *W) {})
-				it("it 2", func(t *T, w *W) {})
+				it("it 1", func(t *T) {})
+				it("it 2", func(t *T) {})
 			})
 
 			describe("describe 2", func() {
-				it("it 3", func(t *T, w *W) {})
-				it("it 4", func(t *T, w *W) {
-					w.t.Skip()
+				it("it 3", func(t *T) {})
+				it("it 4", func(t *T) {
+					t.Skip()
 				})
 			})
 		})

@@ -28,25 +28,30 @@ const (
 type Feature func(title string, cb func())
 type Background func(cb func())
 type Scenario func(title string, cb func())
-type Given func(title string, cb func(*testing.T, *World))
-type When func(title string, cb func(*testing.T, *World))
-type Then func(title string, cb func(*testing.T, *World))
+type Given func(title string, cb func(*testing.T))
+type When func(title string, cb func(*testing.T))
+type Then func(title string, cb func(*testing.T))
 type Table func(items any, columns ...string)
 
+type ParallelGiven func(title string, cb func(*testing.T, *World))
+type ParallelWhen func(title string, cb func(*testing.T, *World))
+type ParallelThen func(title string, cb func(*testing.T, *World))
+
 type featureStep struct {
-	t        *testing.T
-	kind     featureStepKind
-	title    string
-	printed  bool
-	file     string
-	lineNo   int
-	failed   bool
-	failedAt int
-	executed bool
-	cb       func(*testing.T, *World)
-	cb2      func()
-	done     func()
-	n        *node2
+	t          *testing.T
+	kind       featureStepKind
+	title      string
+	printed    bool
+	file       string
+	lineNo     int
+	failed     bool
+	failedAt   int
+	executed   bool
+	parallelCb func(*testing.T, *World)
+	cb         func(*testing.T)
+	cb2        func()
+	done       func()
+	n          *node2
 }
 
 // FeatureSuite is a test suite which is inspired by the Cucumber/Gherkin
@@ -132,6 +137,20 @@ func (fs *FeatureSuite) API() (
 ) {
 	return fs.feature, fs.background, fs.scenario, fs.given,
 		fs.when, fs.then, fs.table
+}
+
+func (fs *FeatureSuite) ParallelAPI(done func()) (
+	Feature,
+	Background,
+	Scenario,
+	ParallelGiven,
+	ParallelWhen,
+	ParallelThen,
+) {
+	fs.parallel = true
+	fs.done = done
+	return fs.feature, fs.background, fs.scenario, fs.parallelGiven,
+		fs.parallelWhen, fs.parallelThen
 }
 
 func (fs *FeatureSuite) prevKind() featureStepKind {
@@ -421,10 +440,12 @@ func (fs *FeatureSuite) scenario(title string, cb func()) {
 	fs.popStack(s)
 }
 
+type StepCallback func(*testing.T)
+
 // Given defines a block which is meant to build the prerequisites for a particular
 // test. It's usual to have any test setup logic defined in a [FeatureSuite.Given]
 // block.
-func (fs *FeatureSuite) given(title string, cb func(*testing.T, *World)) {
+func (fs *FeatureSuite) given(title string, cb func(*testing.T)) {
 	fs.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -443,33 +464,58 @@ func (fs *FeatureSuite) given(title string, cb func(*testing.T, *World)) {
 		//cb:     cb,
 	}
 
-	if fs.parallel {
-		s.cb = func(t *testing.T, w *World) {
-			w.t.Helper()
+	s.cb = func(t *testing.T) {
+		fs.t.Helper()
+		cb(t)
+		s.executed = true
 
-			//defer s.done()
-
-			cb(t, w)
-			//s.executed = true
-
-			if w.t.Failed() {
-				//s.failed = true
-				//fs.failedCount++
-				//s.failedAt = fs.failedCount
-			}
+		if fs.t.Failed() {
+			s.failed = true
+			fs.failedCount++
+			s.failedAt = fs.failedCount
 		}
-	} else {
-		s.cb = func(t *testing.T, w *World) {
-			fs.t.Helper()
-			//cb.(func())()
-			cb(t, w)
-			s.executed = true
+	}
 
-			if fs.t.Failed() {
-				s.failed = true
-				fs.failedCount++
-				s.failedAt = fs.failedCount
-			}
+	n.step = s
+	fs.currNode.children = append(fs.currNode.children, n)
+
+	s.n = n
+
+	if fs.inBackground {
+		fs.pushToBackgroundStack(s)
+	} else {
+		fs.pushStack(s)
+	}
+}
+
+func (fs *FeatureSuite) parallelGiven(title string, cb func(*testing.T, *World)) {
+	fs.t.Helper()
+
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	n := &node2{
+		// ..
+	}
+
+	s := &featureStep{
+		kind:   isGiven,
+		title:  title,
+		lineNo: lineNo,
+		file:   file,
+	}
+
+	s.parallelCb = func(t *testing.T, w *World) {
+		w.t.Helper()
+
+		cb(t, w)
+		//s.executed = true
+
+		if w.t.Failed() {
+			//s.failed = true
+			//fs.failedCount++
+			//s.failedAt = fs.failedCount
 		}
 	}
 
@@ -486,7 +532,7 @@ func (fs *FeatureSuite) given(title string, cb func(*testing.T, *World)) {
 }
 
 // When defines a block which should exercise the actual test.
-func (fs *FeatureSuite) when(title string, cb func(*testing.T, *World)) {
+func (fs *FeatureSuite) when(title string, cb func(*testing.T)) {
 	fs.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -517,8 +563,39 @@ func (fs *FeatureSuite) when(title string, cb func(*testing.T, *World)) {
 	}
 }
 
+func (fs *FeatureSuite) parallelWhen(title string, cb func(*testing.T, *World)) {
+	fs.t.Helper()
+
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	n := &node2{
+		// ..
+	}
+
+	s := &featureStep{
+		kind:       isWhen,
+		title:      title,
+		lineNo:     lineNo,
+		file:       file,
+		parallelCb: cb,
+	}
+
+	n.step = s
+	fs.currNode.children = append(fs.currNode.children, n)
+
+	s.n = n
+
+	if fs.inBackground {
+		fs.pushToBackgroundStack(s)
+	} else {
+		fs.pushStack(s)
+	}
+}
+
 // Then defines a block which should hold a set of assertions.
-func (fs *FeatureSuite) then(title string, cb func(*testing.T, *World)) {
+func (fs *FeatureSuite) then(title string, cb func(*testing.T)) {
 	fs.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -535,6 +612,37 @@ func (fs *FeatureSuite) then(title string, cb func(*testing.T, *World)) {
 		lineNo: lineNo,
 		file:   file,
 		cb:     cb,
+	}
+
+	n.step = s
+	fs.currNode.children = append(fs.currNode.children, n)
+
+	s.n = n
+
+	if fs.inBackground {
+		fs.pushToBackgroundStack(s)
+	} else {
+		fs.pushStack(s)
+	}
+}
+
+func (fs *FeatureSuite) parallelThen(title string, cb func(*testing.T, *World)) {
+	fs.t.Helper()
+
+	_, file, lineNo, _ := runtime.Caller(1)
+	_ = file
+	_ = lineNo
+
+	n := &node2{
+		// ..
+	}
+
+	s := &featureStep{
+		kind:       isThen,
+		title:      title,
+		lineNo:     lineNo,
+		file:       file,
+		parallelCb: cb,
 	}
 
 	n.step = s
@@ -707,7 +815,7 @@ func (fs *FeatureSuite) start() {
 
 						world.currentFeatureStep = s
 
-						s.cb(t, world)
+						s.parallelCb(t, world)
 
 						world.currentFeatureStep = nil
 
@@ -729,7 +837,7 @@ func (fs *FeatureSuite) start() {
 
 					fs.currentStep = s
 
-					s.cb(t, world)
+					s.cb(t)
 
 					fs.currentStep = nil
 				}
@@ -763,9 +871,4 @@ func (fs *FeatureSuite) setOutput(w io.Writer) {
 
 func (fs *FeatureSuite) setPrintFilenames() {
 	fs.printFilenames = true
-}
-
-func (fs *FeatureSuite) setParallel(done func()) {
-	fs.parallel = true
-	fs.done = done
 }

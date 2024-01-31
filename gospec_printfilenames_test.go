@@ -23,13 +23,13 @@ func TestSuiteWithPrintedFilenames(t *testing.T) {
 			describe, _, it := s.With(Output(&out), PrintedFilenames()).API()
 
 			describe("describe 1", func() {
-				it("it 1", func(t *T, w *W) {})
-				it("it 2", func(t *T, w *W) {})
+				it("it 1", func(t *T) {})
+				it("it 2", func(t *T) {})
 			})
 
 			describe("describe 2", func() {
-				it("it 3", func(t *T, w *W) {})
-				it("it 4", func(t *T, w *W) {})
+				it("it 3", func(t *T) {})
+				it("it 4", func(t *T) {})
 			})
 		})
 	}()
@@ -83,26 +83,26 @@ func TestFeatureSuiteWithPrintedFilenames(t *testing.T) {
 
 			feature("feature 1", func() {
 				background(func() {
-					given("given 1", func(t *T, w *W) {})
-					given("given 2", func(t *T, w *W) {})
+					given("given 1", func(t *T) {})
+					given("given 2", func(t *T) {})
 				})
 
 				scenario("scenario 1", func() {
-					given("given 3", func(t *T, w *W) {})
-					when("when 1", func(t *T, w *W) {})
-					then("then 1", func(t *T, w *W) {})
+					given("given 3", func(t *T) {})
+					when("when 1", func(t *T) {})
+					then("then 1", func(t *T) {})
 				})
 			})
 
 			feature("feature 2", func() {
 				background(func() {
-					given("given 12", func(t *T, w *W) {})
+					given("given 12", func(t *T) {})
 				})
 
 				scenario("scenario 11", func() {
-					given("given 13", func(t *T, w *W) {})
-					when("when 11", func(t *T, w *W) {})
-					then("then 11", func(t *T, w *W) {})
+					given("given 13", func(t *T) {})
+					when("when 11", func(t *T) {})
+					then("then 11", func(t *T) {})
 				})
 			})
 		})

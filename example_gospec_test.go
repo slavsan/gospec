@@ -18,7 +18,7 @@ func Example_suite() {
 		describe("Cart", func() {
 			var cart []string
 
-			beforeEach(func(t *testing.T, w *gospec.World) {
+			beforeEach(func(t *testing.T) {
 				cart = []string{
 					"Gopher Toy",
 					"Crab Toy",
@@ -27,16 +27,16 @@ func Example_suite() {
 
 			describe("cart updates", func() {
 				describe("given a new item has already been added", func() {
-					beforeEach(func(t *testing.T, w *gospec.World) {
+					beforeEach(func(t *testing.T) {
 						cart = append(cart, "Lizard toy")
 					})
 
 					describe("when we remove the second item", func() {
-						beforeEach(func(t *testing.T, w *gospec.World) {
+						beforeEach(func(t *testing.T) {
 							cart = []string{cart[0], cart[2]}
 						})
 
-						it("then the cart should contain the correct two items", func(t *testing.T, w *gospec.World) {
+						it("then the cart should contain the correct two items", func(t *testing.T) {
 							assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, cart)
 						})
 					})
@@ -45,16 +45,16 @@ func Example_suite() {
 
 			describe("removing items from the cart", func() {
 				describe("given the second item has already been removed", func() {
-					beforeEach(func(t *testing.T, w *gospec.World) {
+					beforeEach(func(t *testing.T) {
 						cart = cart[:1]
 					})
 
 					describe("when we remove the first item", func() {
-						beforeEach(func(t *testing.T, w *gospec.World) {
+						beforeEach(func(t *testing.T) {
 							cart = cart[:0]
 						})
 
-						it("then the cart should contain 0 items", func(t *testing.T, w *gospec.World) {
+						it("then the cart should contain 0 items", func(t *testing.T) {
 							assert.Equal(t, []string{}, cart)
 						})
 					})

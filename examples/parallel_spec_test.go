@@ -9,7 +9,7 @@ import (
 
 func TestSpecSuiteInParallelExample(t *testing.T) {
 	gospec.WithSpecSuite(t, func(s *gospec.SpecSuite) {
-		describe, beforeEach, it := s.With(gospec.Parallel(func() {})).API()
+		describe, beforeEach, it := s.ParallelAPI(func() {})
 
 		describe("Cart", func() {
 			beforeEach(func(t *testing.T, w *gospec.World) {

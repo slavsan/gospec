@@ -3,14 +3,13 @@ package gospec
 import "io"
 
 // SuiteOption is a type defining an option for controlling the behaviour of [SpecSuite] or [FeatureSuite] instances.
-// The available options are: [Output], [Parallel], and [PrintedFilenames].
+// The available options are: [Output] and [PrintedFilenames].
 type SuiteOption func(suiteInterface SuiteInterface)
 
 // SuiteInterface is an interface implemented by both [SpecSuite] and [FeatureSuite] suites. It is internal
 // and is used by the available [SuiteOption] implementations.
 type SuiteInterface interface {
 	setOutput(out io.Writer)
-	setParallel(done func())
 	setPrintFilenames()
 }
 
@@ -22,20 +21,6 @@ type SuiteInterface interface {
 func Output(w io.Writer) SuiteOption {
 	return func(suite SuiteInterface) {
 		suite.setOutput(w)
-	}
-}
-
-// Parallel is an option which enables parallel execution of tests. It's equivalent to calling `t.Parallel()`
-// in standard Go tests. All the tests included in a top-level [SpecSuite] or [FeatureSuite] block would execute
-// in parallel once this option is enabled for the suite, e.g. via:
-//
-//	spec := gospec.NewTestSuite(t, gospec.Parallel())
-//
-// One important requirement for using this option is to also use the [World] instance which gets passed to each
-// block's function, at least the ones that are supposed to execute code.
-func Parallel(done func()) SuiteOption {
-	return func(suite SuiteInterface) {
-		suite.setParallel(done)
 	}
 }
 
