@@ -1,4 +1,4 @@
-package examples_test
+package gospec_test
 
 import (
 	"testing"
@@ -7,9 +7,13 @@ import (
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
 
-func TestSpecSuiteInParallelExample(t *testing.T) {
+// Do not execute this example because it will fail. It's not a real
+// test and its purpose is purely presentational.
+
+// ExampleParallelSpecSuite shows an example gospec.SpecSuite which runs tests in parallel.
+func Example_parallelSpecSuite() {
 	gospec.WithSpecSuite(t, func(s *gospec.SpecSuite) {
-		describe, beforeEach, it := s.ParallelAPI(func() {})
+		describe, beforeEach, it := s.ParallelAPI(func() { /* optionally, execute this once all parallel tests have finished */ })
 
 		describe("Cart", func() {
 			beforeEach(func(t *testing.T, w *gospec.World) {

@@ -4,64 +4,27 @@ import (
 	"bytes"
 	"sort"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
 
-type mock struct {
-	t          *testing.T
-	calls      [][]any
-	testTitles []string
-}
-
-func (m *mock) Helper() {
-	// ..
-}
-
-func (m *mock) Parallel() {
-	// ..
-}
-
-func (m *mock) Errorf(format string, args ...interface{}) {
-	var call []any
-	call = append(call, format)
-	call = append(call, args...)
-	m.calls = append(m.calls, call)
-}
-
-func (m *mock) Run(name string, f func(t *testing.T)) bool {
-	m.testTitles = append(m.testTitles, name)
-	m.t.Run(name, f)
-	return false
-}
-
-type assertMock struct {
-	mu    sync.Mutex
-	calls [][]any
-}
-
-func (m *assertMock) Assert(args ...any) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.calls = append(m.calls, args)
-	// ..
-}
-
 func TestFeaturesCanBeSetAtTopLevel(t *testing.T) {
 	var (
-		out     bytes.Buffer
-		tm      = &mock{t: nil}
-		fs      = NewFeatureSuite(t, WithOutput(&out))
-		feature = fs.Feature
+		out bytes.Buffer
+		tm  = &mock{t: nil}
 	)
 
-	fs.t = tm
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			s.t = tm
+			feature, _, _, _, _, _, _ := s.With(Output(&out)).API()
 
-	feature("feature 1", func() {})
-	feature("feature 2", func() {})
+			feature("feature 1", func() {})
+			feature("feature 2", func() {})
+		})
+	}()
 
 	assert.Equal(t, [][]any(nil), tm.calls)
 
@@ -78,38 +41,42 @@ func TestFeaturesCanNotBeNested(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		fs          = NewFeatureSuite(t, WithOutput(&out))
-		feature     = fs.Feature
 	)
 
-	fs.t = testingMock
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			s.t = testingMock
+			feature, _, _, _, _, _, _ := s.With(Output(&out)).API()
 
-	feature("Checkout", func() {
-		feature("nested feature", func() {
+			feature("Checkout", func() {
+				feature("nested feature", func() {
+				})
+			})
 		})
-	})
+	}()
 
 	assert.Equal(t, [][]any{{"invalid position for `Feature` function, it must be at top level"}}, testingMock.calls)
-	assert.Equal(t, "\n", out.String())
+	assert.Equal(t, "", out.String())
 }
 
 func TestFeaturesContainOnlyScenariosAndBackgroundCalls(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		fs          = NewFeatureSuite(t, WithOutput(&out))
-		feature     = fs.Feature
-		background  = fs.Background
-		scenario    = fs.Scenario
 	)
 
-	fs.t = testingMock
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			s.t = testingMock
+			feature, background, scenario, _, _, _, _ := s.With(Output(&out)).API()
 
-	feature("Checkout", func() {
-		background(func() {})
-		scenario("scenario 1", func() {})
-		scenario("scenario 2", func() {})
-	})
+			feature("Checkout", func() {
+				background(func() {})
+				scenario("scenario 1", func() {})
+				scenario("scenario 2", func() {})
+			})
+		})
+	}()
 
 	assert.Equal(t, [][]any(nil), testingMock.calls)
 	assert.Equal(t, []string{
@@ -134,52 +101,49 @@ func TestScenariosCanNotBeNested(t *testing.T) {
 	var (
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(t, WithOutput(&out))
-		feature     = spec.Feature
-		scenario    = spec.Scenario
 	)
 
-	spec.t = testingMock
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			s.t = testingMock
+			feature, _, scenario, _, _, _, _ := s.With(Output(&out)).API()
 
-	feature("Checkout", func() {
-		scenario("scenario 1", func() {
-			scenario("scenario 2", func() {})
+			feature("Checkout", func() {
+				scenario("scenario 1", func() {
+					scenario("scenario 2", func() {})
+				})
+			})
 		})
-	})
+	}()
 
 	assert.Equal(t, [][]any{{"invalid position for `Scenario` function, it must be inside a `Feature` call"}}, testingMock.calls)
 	assert.Equal(t, []string{"Checkout/scenario 1"}, testingMock.testTitles)
 
-	assert.Equal(t, strings.Join([]string{
-		`Feature: Checkout`,
-		``,
-		`	Scenario: scenario 1`,
-		``,
-		``,
-	}, "\n"), out.String())
+	assert.Equal(t, "", out.String())
 }
 
 func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 	var (
 		out         bytes.Buffer
+		spec        *FeatureSuite
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(t, WithOutput(&out))
-		feature     = spec.Feature
-		scenario    = spec.Scenario
-		given       = spec.Given
-		when        = spec.When
-		then        = spec.Then
 	)
 
-	spec.t = testingMock
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			spec = s
+			s.t = testingMock
+			feature, _, scenario, given, when, then, _ := s.With(Output(&out)).API()
 
-	feature("Checkout", func() {
-		scenario("scenario 1", func() {
-			given("given 1", func() {})
-			when("when 1", func() {})
-			then("then 1", func() {})
+			feature("Checkout", func() {
+				scenario("scenario 1", func() {
+					given("given 1", func(t *T) {})
+					when("when 1", func(t *T) {})
+					then("then 1", func(t *T) {})
+				})
+			})
 		})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), testingMock.calls)
 	assert.Equal(t, 0, len(spec.stack))
@@ -210,30 +174,31 @@ func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 	var (
 		out         bytes.Buffer
+		spec        *FeatureSuite
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(t, WithOutput(&out))
-		feature     = spec.Feature
-		scenario    = spec.Scenario
-		given       = spec.Given
-		when        = spec.When
-		then        = spec.Then
 	)
 
-	spec.t = testingMock
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			spec = s
+			s.t = testingMock
+			feature, _, scenario, given, when, then, _ := s.With(Output(&out)).API()
 
-	feature("Checkout", func() {
-		scenario("scenario 1", func() {
-			given("given 1", func() {})
-			when("when 1", func() {})
-			then("then 1", func() {})
-		})
+			feature("Checkout", func() {
+				scenario("scenario 1", func() {
+					given("given 1", func(t *T) {})
+					when("when 1", func(t *T) {})
+					then("then 1", func(t *T) {})
+				})
 
-		scenario("scenario 2", func() {
-			given("given 2", func() {})
-			when("when 2", func() {})
-			then("then 2", func() {})
+				scenario("scenario 2", func() {
+					given("given 2", func(t *T) {})
+					when("when 2", func(t *T) {})
+					then("then 2", func(t *T) {})
+				})
+			})
 		})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), testingMock.calls)
 	assert.Equal(t, 0, len(spec.stack))
@@ -274,31 +239,31 @@ func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 	var (
 		out         bytes.Buffer
+		spec        *FeatureSuite
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(t, WithOutput(&out))
-		feature     = spec.Feature
-		scenario    = spec.Scenario
-		background  = spec.Background
-		given       = spec.Given
-		when        = spec.When
-		then        = spec.Then
 	)
 
-	spec.t = testingMock
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			spec = s
+			s.t = testingMock
+			feature, background, scenario, given, when, then, _ := s.With(Output(&out)).API()
 
-	feature("Checkout", func() {
-		background(func() {
-			given("given 0", func() {})
-			when("when 0", func() {})
-			then("then 0", func() {})
-		})
+			feature("Checkout", func() {
+				background(func() {
+					given("given 0", func(t *T) {})
+					when("when 0", func(t *T) {})
+					then("then 0", func(t *T) {})
+				})
 
-		scenario("scenario 1", func() {
-			given("given 1", func() {})
-			when("when 1", func() {})
-			then("then 1", func() {})
+				scenario("scenario 1", func() {
+					given("given 1", func(t *T) {})
+					when("when 1", func(t *T) {})
+					then("then 1", func(t *T) {})
+				})
+			})
 		})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), testingMock.calls)
 	assert.Equal(t, 0, len(spec.stack))
@@ -334,37 +299,37 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 	var (
 		out         bytes.Buffer
+		spec        *FeatureSuite
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(t, WithOutput(&out))
-		feature     = spec.Feature
-		scenario    = spec.Scenario
-		background  = spec.Background
-		given       = spec.Given
-		when        = spec.When
-		then        = spec.Then
 	)
 
-	spec.t = testingMock
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			spec = s
+			s.t = testingMock
+			feature, background, scenario, given, when, then, _ := s.With(Output(&out)).API()
 
-	feature("Checkout", func() {
-		background(func() {
-			given("given 0", func() {})
-			when("when 0", func() {})
-			then("then 0", func() {})
-		})
+			feature("Checkout", func() {
+				background(func() {
+					given("given 0", func(t *T) {})
+					when("when 0", func(t *T) {})
+					then("then 0", func(t *T) {})
+				})
 
-		scenario("scenario 1", func() {
-			given("given 1", func() {})
-			when("when 1", func() {})
-			then("then 1", func() {})
-		})
+				scenario("scenario 1", func() {
+					given("given 1", func(t *T) {})
+					when("when 1", func(t *T) {})
+					then("then 1", func(t *T) {})
+				})
 
-		scenario("scenario 2", func() {
-			given("given 2", func() {})
-			when("when 2", func() {})
-			then("then 2", func() {})
+				scenario("scenario 2", func() {
+					given("given 2", func(t *T) {})
+					when("when 2", func(t *T) {})
+					then("then 2", func(t *T) {})
+				})
+			})
 		})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), testingMock.calls)
 	assert.Equal(t, 0, len(spec.stack))
@@ -426,100 +391,101 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
 		mockAssert  = &assertMock{}
-		spec        = NewFeatureSuite(t, WithOutput(&out))
-		feature, background, scenario,
-		given, when, then, table = spec.API()
 	)
 
-	spec.t = testingMock
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			s.t = testingMock
+			feature, background, scenario, given, when, then, table := s.With(Output(&out)).API()
+			_ = table
 
-	_ = table
+			feature("Checkout 1", func() {
+				var nums []int
 
-	feature("Checkout 1", func() {
-		var nums []int
+				background(func() {
+					given("given 1", func(t *T) {
+						nums = []int{}
+						nums = append(nums, 1)
+					})
+					when("when 1", func(t *T) {
+						nums = append(nums, 2)
+					})
+					then("then 1", func(t *T) {
+						nums = append(nums, 3)
+					})
+				})
 
-		background(func() {
-			given("given 1", func() {
-				nums = []int{}
-				nums = append(nums, 1)
+				scenario("scenario 1", func() {
+					given("given 2", func(t *T) {
+						nums = append(nums, 4)
+					})
+					when("when 2", func(t *T) {
+						nums = append(nums, 5)
+					})
+					then("then 2", func(t *T) {
+						nums = append(nums, 6)
+						mockAssert.Assert(nums)
+					})
+				})
+
+				scenario("scenario 2", func() {
+					given("given 2", func(t *T) {
+						nums = append(nums, 7)
+					})
+					when("when 2", func(t *T) {
+						nums = append(nums, 8)
+					})
+					then("then 2", func(t *T) {
+						nums = append(nums, 9)
+						mockAssert.Assert(nums)
+					})
+				})
 			})
-			when("when 1", func() {
-				nums = append(nums, 2)
-			})
-			then("then 1", func() {
-				nums = append(nums, 3)
+
+			feature("Checkout 2", func() {
+				var nums []int
+
+				background(func() {
+					given("given 11", func(t *T) {
+						nums = []int{}
+						nums = append(nums, 11)
+					})
+					when("when 11", func(t *T) {
+						nums = append(nums, 12)
+					})
+					then("then 11", func(t *T) {
+						nums = append(nums, 13)
+					})
+				})
+
+				scenario("scenario 11", func() {
+					given("given 12", func(t *T) {
+						nums = append(nums, 14)
+					})
+					when("when 12", func(t *T) {
+						nums = append(nums, 15)
+					})
+					then("then 12", func(t *T) {
+						nums = append(nums, 16)
+						mockAssert.Assert(nums)
+					})
+				})
+
+				scenario("scenario 12", func() {
+					given("given 12", func(t *T) {
+						nums = append(nums, 17)
+					})
+					when("when 12", func(t *T) {
+						nums = append(nums, 18)
+					})
+					then("then 12", func(t *T) {
+						nums = append(nums, 19)
+						mockAssert.Assert(nums)
+					})
+				})
 			})
 		})
-
-		scenario("scenario 1", func() {
-			given("given 2", func() {
-				nums = append(nums, 4)
-			})
-			when("when 2", func() {
-				nums = append(nums, 5)
-			})
-			then("then 2", func() {
-				nums = append(nums, 6)
-				mockAssert.Assert(nums)
-			})
-		})
-
-		scenario("scenario 2", func() {
-			given("given 2", func() {
-				nums = append(nums, 7)
-			})
-			when("when 2", func() {
-				nums = append(nums, 8)
-			})
-			then("then 2", func() {
-				nums = append(nums, 9)
-				mockAssert.Assert(nums)
-			})
-		})
-	})
-
-	feature("Checkout 2", func() {
-		var nums []int
-
-		background(func() {
-			given("given 11", func() {
-				nums = []int{}
-				nums = append(nums, 11)
-			})
-			when("when 11", func() {
-				nums = append(nums, 12)
-			})
-			then("then 11", func() {
-				nums = append(nums, 13)
-			})
-		})
-
-		scenario("scenario 11", func() {
-			given("given 12", func() {
-				nums = append(nums, 14)
-			})
-			when("when 12", func() {
-				nums = append(nums, 15)
-			})
-			then("then 12", func() {
-				nums = append(nums, 16)
-				mockAssert.Assert(nums)
-			})
-		})
-
-		scenario("scenario 12", func() {
-			given("given 12", func() {
-				nums = append(nums, 17)
-			})
-			when("when 12", func() {
-				nums = append(nums, 18)
-			})
-			then("then 12", func() {
-				nums = append(nums, 19)
-				mockAssert.Assert(nums)
-			})
-		})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), testingMock.calls)
 	assert.Equal(t, 4, len(mockAssert.calls))
@@ -581,134 +547,143 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 		out         bytes.Buffer
 		testingMock = &mock{t: t}
 		mockAssert  = &assertMock{}
-		spec        = NewFeatureSuite(t, WithOutput(&out), WithParallel())
-		feature, background, scenario,
-		given, when, then, table = spec.API()
+		done        = make(chan bool, 1)
 	)
 
-	spec.t = testingMock
-
-	var wg sync.WaitGroup
-	wg.Add(4)
-
-	_ = background
-	_ = table
-
-	done := make(chan bool, 1)
-
 	t.Run("run parallel tests", func(t *testing.T) {
-		feature("Checkout 1", func() {
-			background(func() {
-				given("given 1", func(w *World) {
-					w.Set("nums", []int{1})
-				})
-				when("when 1", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 2)
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			s.t = testingMock
+			feature, background, scenario,
+				given, when, then := s.With(Output(&out)).ParallelAPI(func() { close(done) })
+
+			type Product struct {
+				Name  string
+				Price float64
+				Type  int
+			}
+
+			feature("Checkout 1", func() {
+				background(func() {
+					given("given 1", func(t *T, w *World) {
+						items := []Product{
+							{Name: "Gopher toy", Price: 1.99, Type: 10},
+							{Name: "Crab toy", Price: 2.49, Type: 12},
+						}
+						w.Table(s, items, "Name", "Price")
+						w.Set("nums", []int{1})
+					})
+					when("when 1", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 2)
+						})
+					})
+					then("then 1", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 3)
+						})
 					})
 				})
-				then("then 1", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 3)
+
+				scenario("scenario 1", func() {
+					given("given 2", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 4)
+						})
+					})
+					when("when 2", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 5)
+						})
+					})
+					then("then 2", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 6)
+						})
+						mockAssert.Assert(w.Get("nums"))
+					})
+				})
+
+				scenario("scenario 2", func() {
+					given("given 2", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 7)
+						})
+					})
+					when("when 2", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 8)
+						})
+					})
+					then("then 2", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 9)
+						})
+						mockAssert.Assert(w.Get("nums"))
 					})
 				})
 			})
 
-			scenario("scenario 1", func() {
-				given("given 2", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 4)
+			feature("Checkout 2", func() {
+				background(func() {
+					given("given 11", func(t *T, w *World) {
+						w.Set("nums", []int{11})
+					})
+					when("when 11", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 12)
+						})
+					})
+					then("then 11", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 13)
+						})
 					})
 				})
-				when("when 2", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 5)
-					})
-				})
-				then("then 2", func(w *World) {
-					defer wg.Done()
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 6)
-					})
-					mockAssert.Assert(w.Get("nums"))
-				})
-			})
 
-			scenario("scenario 2", func() {
-				given("given 2", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 7)
+				scenario("scenario 11", func() {
+					given("given 12", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 14)
+						})
+					})
+					when("when 12", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 15)
+						})
+					})
+					then("then 12", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 16)
+						})
+						mockAssert.Assert(w.Get("nums"))
 					})
 				})
-				when("when 2", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 8)
-					})
-				})
-				then("then 2", func(w *World) {
-					defer wg.Done()
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 9)
-					})
-					mockAssert.Assert(w.Get("nums"))
-				})
-			})
-		})
 
-		feature("Checkout 2", func() {
-			background(func() {
-				given("given 11", func(w *World) {
-					w.Set("nums", []int{11})
-				})
-				when("when 11", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 12)
-					})
-				})
-				then("then 11", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 13)
-					})
-				})
-			})
+				scenario("scenario 12", func() {
+					given("given 12", func(t *T, w *World) {
+						var items []Product
 
-			scenario("scenario 11", func() {
-				given("given 12", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 14)
-					})
-				})
-				when("when 12", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 15)
-					})
-				})
-				then("then 12", func(w *World) {
-					defer wg.Done()
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 16)
-					})
-					mockAssert.Assert(w.Get("nums"))
-				})
-			})
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 17)
+						})
 
-			scenario("scenario 12", func() {
-				given("given 12", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 17)
+						items = []Product{
+							{Name: "Gopher toy", Price: 14.99, Type: 2},
+							{Name: "Crab toy", Price: 17.49, Type: 8},
+						}
+						w.Table(s, items, "Name", "Price")
 					})
-				})
-				when("when 12", func(w *World) {
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 18)
+					when("when 12", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 18)
+						})
 					})
-				})
-				then("then 12", func(w *World) {
-					defer wg.Done()
-					w.Swap("nums", func(current any) any {
-						return append(current.([]int), 19)
+					then("then 12", func(t *T, w *World) {
+						w.Swap("nums", func(current any) any {
+							return append(current.([]int), 19)
+						})
+						mockAssert.Assert(w.Get("nums"))
 					})
-					mockAssert.Assert(w.Get("nums"))
 				})
 			})
 		})
@@ -716,11 +691,6 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 
 	t.Run("assert parallel tests run correctly", func(t *testing.T) {
 		t.Parallel()
-
-		go func() {
-			wg.Wait()
-			done <- true
-		}()
 
 		select {
 		case <-done:
@@ -761,6 +731,9 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 			``,
 			`	Background:`,
 			`		Given given 1`,
+			`			| Name       | Price |`,
+			`			| Gopher toy | 1.99  |`,
+			`			| Crab toy   | 2.49  |`,
 			`		When when 1`,
 			`		Then then 1`,
 			``,
@@ -788,6 +761,9 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 			``,
 			`	Scenario: scenario 12`,
 			`		Given given 12`,
+			`			| Name       | Price |`,
+			`			| Gopher toy | 14.99 |`,
+			`			| Crab toy   | 17.49 |`,
 			`		When when 12`,
 			`		Then then 12`,
 			``,
@@ -799,41 +775,39 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 func TestTableOutput(t *testing.T) {
 	var (
 		out         bytes.Buffer
+		spec        *FeatureSuite
 		testingMock = &mock{t: t}
-		spec        = NewFeatureSuite(t, WithOutput(&out))
-		feature     = spec.Feature
-		scenario    = spec.Scenario
-		given       = spec.Given
-		when        = spec.When
-		then        = spec.Then
-		table       = spec.Table
 	)
 
-	spec.t = testingMock
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			spec = s
+			s.t = testingMock
+			feature, _, scenario, given, when, then, table := s.With(Output(&out)).API()
 
-	feature("Checkout", func() {
-		type Product struct {
-			Name  string
-			Price float64
-			Type  int
-		}
-
-		var items []Product
-
-		scenario("scenario 1", func() {
-			given("given 1", func() {
-				// ..
-			})
-			when("when 1", func() {})
-			then("then 1", func() {
-				items = []Product{
-					{Name: "Gopher toy", Price: 14.99, Type: 2},
-					{Name: "Crab toy", Price: 17.49, Type: 8},
+			feature("Checkout", func() {
+				type Product struct {
+					Name  string
+					Price float64
+					Type  int
 				}
-				table([]string{"Name", "Price"}, items)
+
+				var items []Product
+
+				scenario("scenario 1", func() {
+					given("given 1", func(t *T) {})
+					when("when 1", func(t *T) {})
+					then("then 1", func(t *T) {
+						items = []Product{
+							{Name: "Gopher toy", Price: 14.99, Type: 2},
+							{Name: "Crab toy", Price: 17.49, Type: 8},
+						}
+						table(items, "Name", "Price")
+					})
+				})
 			})
 		})
-	})
+	}()
 
 	assert.Equal(t, [][]any(nil), testingMock.calls)
 	assert.Equal(t, 0, len(spec.stack))

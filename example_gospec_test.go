@@ -1,6 +1,8 @@
 package gospec_test
 
 import (
+	"testing"
+
 	"github.com/slavsan/gospec"
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
@@ -8,51 +10,53 @@ import (
 // Do not execute this example because it will fail. It's not a real
 // test and its purpose is purely presentational.
 
-// ExampleTestSuite shows an example gospec.Suite.
-func Example_suite() {
-	describe, beforeEach, it := gospec.NewTestSuite(t).API()
+// ExampleTestSuite shows an example gospec.SpecSuite.
+func Example_specSuite() {
+	gospec.WithSpecSuite(t, func(s *gospec.SpecSuite) {
+		describe, beforeEach, it := s.API()
 
-	describe("Cart", func() {
-		var cart []string
+		describe("Cart", func() {
+			var cart []string
 
-		beforeEach(func() {
-			cart = []string{
-				"Gopher Toy",
-				"Crab Toy",
-			}
-		})
+			beforeEach(func(t *testing.T) {
+				cart = []string{
+					"Gopher Toy",
+					"Crab Toy",
+				}
+			})
 
-		describe("cart updates", func() {
-			describe("given a new item has already been added", func() {
-				beforeEach(func() {
-					cart = append(cart, "Lizard toy")
-				})
-
-				describe("when we remove the second item", func() {
-					beforeEach(func() {
-						cart = []string{cart[0], cart[2]}
+			describe("cart updates", func() {
+				describe("given a new item has already been added", func() {
+					beforeEach(func(t *testing.T) {
+						cart = append(cart, "Lizard toy")
 					})
 
-					it("then the cart should contain the correct two items", func() {
-						assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, cart)
+					describe("when we remove the second item", func() {
+						beforeEach(func(t *testing.T) {
+							cart = []string{cart[0], cart[2]}
+						})
+
+						it("then the cart should contain the correct two items", func(t *testing.T) {
+							assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, cart)
+						})
 					})
 				})
 			})
-		})
 
-		describe("removing items from the cart", func() {
-			describe("given the second item has already been removed", func() {
-				beforeEach(func() {
-					cart = cart[:1]
-				})
-
-				describe("when we remove the first item", func() {
-					beforeEach(func() {
-						cart = cart[:0]
+			describe("removing items from the cart", func() {
+				describe("given the second item has already been removed", func() {
+					beforeEach(func(t *testing.T) {
+						cart = cart[:1]
 					})
 
-					it("then the cart should contain 0 items", func() {
-						assert.Equal(t, []string{}, cart)
+					describe("when we remove the first item", func() {
+						beforeEach(func(t *testing.T) {
+							cart = cart[:0]
+						})
+
+						it("then the cart should contain 0 items", func(t *testing.T) {
+							assert.Equal(t, []string{}, cart)
+						})
 					})
 				})
 			})
