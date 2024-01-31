@@ -253,8 +253,9 @@ func TestCartFeature(t *testing.T) {
 
 When initializing `SpecSuite` or `FeatureSuite` instances, there are several options to enhance the developer experience.
 
-- `WithOutput` for specifying a custom output writer
-- `WithPrintedFilenames` for printing the `filename:line` on each line where there is a `describe`, `beforeEach`, `it`, `feature`, `scenario` (or any other API method) defined. An editor which supports recognition of paths and allows for jumping to source, could improve the developer experience when dealing with maintenance of existing tests/specs.
+- `Output` for specifying a custom output writer
+- `PrintedFilenames` for printing the `filename:line` on each line where there is a `describe`, `beforeEach`, `it`, `feature`, `scenario` (or any other API method) defined. An editor which supports recognition of paths and allows for jumping to source, could improve the developer experience when dealing with maintenance of existing tests/specs.
+- `Indent` for specifying the single indent step in spec/feature output
 
 ### Parallel execution
 

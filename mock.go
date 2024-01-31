@@ -26,6 +26,10 @@ func (m *mock) Skipped() bool {
 	return false
 }
 
+func (m *mock) Fatalf(format string, args ...interface{}) {
+	m.t.Fatalf(format, args...)
+}
+
 func (m *mock) Errorf(format string, args ...interface{}) {
 	var call []any
 	call = append(call, format)

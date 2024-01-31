@@ -40,6 +40,7 @@ type SpecSuite struct {
 	stack          []*step
 	suites         [][]*step
 	indent         int
+	indentStep     string
 	atSuiteIndex   int
 	out            io.Writer
 	basePath       string
@@ -61,7 +62,7 @@ type SpecSuite struct {
 func WithSpecSuite(t *testing.T, callback func(s *SpecSuite)) {
 	t.Helper()
 
-	s := newTestSuite(t)
+	s := newSpectSuite(t)
 
 	defer s.start2()
 
@@ -104,14 +105,27 @@ type step struct {
 	done       func()
 }
 
+const (
+	TwoSpaces  = "  "
+	FourSpaces = "    "
+	OneTab     = "	"
+)
+
+var availableIndents = map[string]struct{}{ //nolint:gochecknoglobals
+	TwoSpaces:  {},
+	FourSpaces: {},
+	OneTab:     {},
+}
+
 // NewTestSuite creates a new instance of SpecSuite.
-func newTestSuite(t *testing.T) *SpecSuite {
+func newSpectSuite(t *testing.T) *SpecSuite {
 	t.Helper()
 	suite := &SpecSuite{
-		t:        t,
-		out:      os.Stdout,
-		indent:   0,
-		basePath: getBasePath(),
+		t:          t,
+		out:        os.Stdout,
+		indent:     0,
+		indentStep: TwoSpaces,
+		basePath:   getBasePath(),
 	}
 	return suite
 }
@@ -598,6 +612,14 @@ func (suite *SpecSuite) setOutput(w io.Writer) {
 
 func (suite *SpecSuite) setPrintFilenames() {
 	suite.printFilenames = true
+}
+
+func (suite *SpecSuite) setIndent(step string) {
+	suite.t.Helper()
+	if _, ok := availableIndents[step]; !ok {
+		suite.t.Fatalf("unsupported indentation: '%s'", step)
+	}
+	suite.indentStep = step
 }
 
 func getBasePath() string {

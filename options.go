@@ -3,7 +3,7 @@ package gospec
 import "io"
 
 // SuiteOption is a type defining an option for controlling the behaviour of [SpecSuite] or [FeatureSuite] instances.
-// The available options are: [Output] and [PrintedFilenames].
+// The available options are: [Output], [Indent] and [PrintedFilenames].
 type SuiteOption func(suiteInterface SuiteInterface)
 
 // SuiteInterface is an interface implemented by both [SpecSuite] and [FeatureSuite] suites. It is internal
@@ -11,6 +11,7 @@ type SuiteOption func(suiteInterface SuiteInterface)
 type SuiteInterface interface {
 	setOutput(out io.Writer)
 	setPrintFilenames()
+	setIndent(step string)
 }
 
 // Output is an option which provides the ability to capture the SpecSuite output in a custom
@@ -30,5 +31,12 @@ func Output(w io.Writer) SuiteOption {
 func PrintedFilenames() SuiteOption {
 	return func(suite SuiteInterface) {
 		suite.setPrintFilenames()
+	}
+}
+
+// Indent is an option which sets the indent style, one of: [TwoSpaces], [FourSpaces], [OneTab].
+func Indent(step string) SuiteOption {
+	return func(suite SuiteInterface) {
+		suite.setIndent(step)
 	}
 }

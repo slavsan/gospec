@@ -93,7 +93,7 @@ func (w *World) Table(fs *FeatureSuite, items any, columns ...string) { //nolint
 			rows = append(rows, row)
 		}
 	}
-	sb.WriteString("\t\t\t|")
+	sb.WriteString(fmt.Sprintf("%s|", strings.Repeat(fs.indentStep, 3)))
 	for _, c := range columns {
 		sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", c))
 		sb.WriteString("|")
@@ -105,7 +105,7 @@ func (w *World) Table(fs *FeatureSuite, items any, columns ...string) { //nolint
 		if i != 0 {
 			sb.WriteString("\n")
 		}
-		sb.WriteString("\t\t\t|")
+		sb.WriteString(fmt.Sprintf("%s|", strings.Repeat(fs.indentStep, 3)))
 		for _, c := range columns {
 			sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", r[c]))
 			_ = c

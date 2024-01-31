@@ -105,6 +105,7 @@ type FeatureSuite struct {
 	suites          [][]*featureStep
 	inBackground    bool
 	atSuiteIndex    int
+	indentStep      string
 	out             io.Writer
 	basePath        string
 	printFilenames  bool
@@ -122,9 +123,10 @@ type FeatureSuite struct {
 func newFeatureSuite(t *testing.T) *FeatureSuite {
 	t.Helper()
 	fs := &FeatureSuite{
-		t:        t,
-		out:      os.Stdout,
-		basePath: getBasePath(),
+		t:          t,
+		out:        os.Stdout,
+		indentStep: TwoSpaces,
+		basePath:   getBasePath(),
 	}
 	return fs
 }
@@ -753,7 +755,7 @@ func (fs *FeatureSuite) table(items any, columns ...string) { //nolint:gocognit,
 			rows = append(rows, row)
 		}
 	}
-	sb.WriteString("\t\t\t|")
+	sb.WriteString(fmt.Sprintf("%s|", strings.Repeat(fs.indentStep, 3)))
 	for _, c := range columns {
 		sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", c)) //nolint:goconst
 		sb.WriteString("|")
@@ -765,7 +767,7 @@ func (fs *FeatureSuite) table(items any, columns ...string) { //nolint:gocognit,
 		if i != 0 {
 			sb.WriteString("\n")
 		}
-		sb.WriteString("\t\t\t|")
+		sb.WriteString(fmt.Sprintf("%s|", strings.Repeat(fs.indentStep, 3)))
 		for _, c := range columns {
 			sb.WriteString(fmt.Sprintf(" %-"+strconv.Itoa(columnWidths[c])+"s ", r[c]))
 			_ = c
@@ -887,4 +889,12 @@ func (fs *FeatureSuite) setOutput(w io.Writer) {
 
 func (fs *FeatureSuite) setPrintFilenames() {
 	fs.printFilenames = true
+}
+
+func (fs *FeatureSuite) setIndent(step string) {
+	fs.t.Helper()
+	if _, ok := availableIndents[step]; !ok {
+		fs.t.Fatalf("unsupported indentation: '%s'", step)
+	}
+	fs.indentStep = step
 }

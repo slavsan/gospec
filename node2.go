@@ -46,26 +46,28 @@ func (n *node2) write(sb *strings.Builder, indent int, suite *FeatureSuite) { //
 	if n.step.kind == isBackground {
 		if suite.printFilenames {
 			sb.WriteString(
-				fmt.Sprintf("\n\tBackground:\t%s:%d\n",
+				fmt.Sprintf("\n%sBackground:\t%s:%d\n",
+					suite.indentStep,
 					strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
 				),
 			)
 		} else {
-			sb.WriteString("\n\tBackground:\n")
+			sb.WriteString(fmt.Sprintf("\n%sBackground:\n", suite.indentStep))
 		}
 	}
 
 	if n.step.kind == isScenario {
 		if suite.printFilenames {
 			sb.WriteString(
-				fmt.Sprintf("\n\tScenario: %s\t%s:%d\n",
+				fmt.Sprintf("\n%sScenario: %s\t%s:%d\n",
+					suite.indentStep,
 					n.step.title,
 					strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
 				),
 			)
 		} else {
 			sb.WriteString(
-				fmt.Sprintf("\n\tScenario: %s\n", n.step.title),
+				fmt.Sprintf("\n%sScenario: %s\n", suite.indentStep, n.step.title),
 			)
 		}
 	}
@@ -73,14 +75,18 @@ func (n *node2) write(sb *strings.Builder, indent int, suite *FeatureSuite) { //
 	if n.step.kind == isGiven {
 		if suite.printFilenames {
 			sb.WriteString(
-				fmt.Sprintf("\t\tGiven %s\t%s:%d\n",
+				fmt.Sprintf("%sGiven %s\t%s:%d\n",
+					strings.Repeat(suite.indentStep, 2),
 					n.step.title,
 					strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
 				),
 			)
 		} else {
 			sb.WriteString(
-				fmt.Sprintf("\t\tGiven %s\n", n.step.title),
+				fmt.Sprintf("%sGiven %s\n",
+					strings.Repeat(suite.indentStep, 2),
+					n.step.title,
+				),
 			)
 		}
 	}
@@ -88,14 +94,18 @@ func (n *node2) write(sb *strings.Builder, indent int, suite *FeatureSuite) { //
 	if n.step.kind == isWhen {
 		if suite.printFilenames {
 			sb.WriteString(
-				fmt.Sprintf("\t\tWhen %s\t%s:%d\n",
+				fmt.Sprintf("%sWhen %s\t%s:%d\n",
+					strings.Repeat(suite.indentStep, 2),
 					n.step.title,
 					strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
 				),
 			)
 		} else {
 			sb.WriteString(
-				fmt.Sprintf("\t\tWhen %s\n", n.step.title),
+				fmt.Sprintf("%sWhen %s\n",
+					strings.Repeat(suite.indentStep, 2),
+					n.step.title,
+				),
 			)
 		}
 	}
@@ -103,14 +113,18 @@ func (n *node2) write(sb *strings.Builder, indent int, suite *FeatureSuite) { //
 	if n.step.kind == isThen {
 		if suite.printFilenames {
 			sb.WriteString(
-				fmt.Sprintf("\t\tThen %s\t%s:%d\n",
+				fmt.Sprintf("%sThen %s\t%s:%d\n",
+					strings.Repeat(suite.indentStep, 2),
 					n.step.title,
 					strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
 				),
 			)
 		} else {
 			sb.WriteString(
-				fmt.Sprintf("\t\tThen %s\n", n.step.title),
+				fmt.Sprintf("%sThen %s\n",
+					strings.Repeat(suite.indentStep, 2),
+					n.step.title,
+				),
 			)
 		}
 	}

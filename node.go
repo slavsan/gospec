@@ -42,7 +42,7 @@ func (n *node) write(sb *strings.Builder, indent int, suite *SpecSuite) {
 
 			sb.WriteString(
 				fmt.Sprintf("%s%s%s\t%s:%d\n",
-					strings.Repeat("\t", indent),
+					strings.Repeat(suite.indentStep, indent),
 					icon,
 					n.step.title,
 					strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
@@ -65,7 +65,7 @@ func (n *node) write(sb *strings.Builder, indent int, suite *SpecSuite) {
 
 		sb.WriteString(
 			fmt.Sprintf("%s%s%s\n",
-				strings.Repeat("\t", indent),
+				strings.Repeat(suite.indentStep, indent),
 				icon,
 				n.step.title,
 			),
@@ -77,7 +77,7 @@ func (n *node) write(sb *strings.Builder, indent int, suite *SpecSuite) {
 	if suite.printFilenames {
 		sb.WriteString(
 			fmt.Sprintf("%s%s\t%s:%d\n",
-				strings.Repeat("\t", indent),
+				strings.Repeat(suite.indentStep, indent),
 				n.step.title,
 				strings.TrimPrefix(n.step.file, basePath), n.step.lineNo,
 			),
@@ -85,7 +85,7 @@ func (n *node) write(sb *strings.Builder, indent int, suite *SpecSuite) {
 	} else {
 		sb.WriteString(
 			fmt.Sprintf("%s%s\n",
-				strings.Repeat("\t", indent),
+				strings.Repeat(suite.indentStep, indent),
 				n.step.title,
 			),
 		)
