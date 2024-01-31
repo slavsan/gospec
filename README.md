@@ -17,61 +17,62 @@ The intended usage is to have the standard Go tests, defined like so `func TestM
 
 ```go
 import (
-    "github.com/slavsan/gospec"
-    ...
+	"testing"
+
+	"github.com/slavsan/gospec"
 )
 
 func TestCartSpec(t *testing.T) {
 	gospec.WithSpecSuite(t, func(s *gospec.SpecSuite) {
-        describe, beforeEach, it := s.API()
+		describe, beforeEach, it := s.API()
 		
-        describe("Cart", func() {
-            var cart []string
+		describe("Cart", func() {
+			var cart []string
 
-            beforeEach(func() {
-                cart = []string{
-                    "Gopher Toy",
-                    "Crab Toy",
-                }
-            })
+			beforeEach(func() {
+				cart = []string{
+					"Gopher Toy",
+					"Crab Toy",
+				}
+			})
 
-            describe("cart updates", func() {
-                describe("given a new item has already been added", func() {
-                    beforeEach(func(t *testing.T) {
-                        cart = append(cart, "Lizard toy")
-                    })
+			describe("cart updates", func() {
+				describe("given a new item has already been added", func() {
+					beforeEach(func(t *testing.T) {
+						cart = append(cart, "Lizard toy")
+					})
 
-                    describe("when we remove the second item", func() {
-                        beforeEach(func(t *testing.T) {
-                            cart = []string{cart[0], cart[2]}
-                        })
+					describe("when we remove the second item", func() {
+						beforeEach(func(t *testing.T) {
+							cart = []string{cart[0], cart[2]}
+						})
 
-                        it("then the cart should contain the correct two items", func(t *testing.T) {
-                            assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, cart)
-                        })
-                    })
-                })
-            })
+						it("then the cart should contain the correct two items", func(t *testing.T) {
+							assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, cart)
+						})
+					})
+				})
+			})
 
-            describe("removing items from the cart", func() {
-                describe("given the second item has already been removed", func() {
-                    beforeEach(func(t *testing.T) {
-                        cart = cart[:1]
-                    })
+			describe("removing items from the cart", func() {
+				describe("given the second item has already been removed", func() {
+					beforeEach(func(t *testing.T) {
+						cart = cart[:1]
+					})
 
-                    describe("when we remove the first item", func() {
-                        beforeEach(func(t *testing.T) {
-                            cart = cart[:0]
-                        })
+					describe("when we remove the first item", func() {
+						beforeEach(func(t *testing.T) {
+							cart = cart[:0]
+						})
 
-                        it("then the cart should contain 0 items", func(t *testing.T) {
-                            assert.Equal(t, []string{}, cart)
-                        })
-                    })
-                })
-            })
-        })
-    })
+						it("then the cart should contain 0 items", func(t *testing.T) {
+							assert.Equal(t, []string{}, cart)
+						})
+					})
+				})
+			})
+		})
+	})
 }
 ```
 </details>
@@ -81,59 +82,60 @@ func TestCartSpec(t *testing.T) {
 
 ```go
 import (
-    "github.com/slavsan/gospec"
-    ...
+	"testing"
+
+	"github.com/slavsan/gospec"
 )
 
 func TestCartSpec(t *testing.T) {
 	gospec.WithSpecSuite(t, func(s *gospec.SpecSuite) {
-        describe, beforeEach, it := s.ParallelAPI()
+		describe, beforeEach, it := s.ParallelAPI()
 
-        describe("Cart", func() {
-            beforeEach(func(t *testing.T, w *gospec.World) {
-                w.Set("cart", []string{
-                    "Gopher Toy",
-                    "Crab Toy",
-                })
-            })
+		describe("Cart", func() {
+			beforeEach(func(t *testing.T, w *gospec.World) {
+				w.Set("cart", []string{
+					"Gopher Toy",
+					"Crab Toy",
+				})
+			})
 
-            describe("cart updates", func() {
-                describe("given a new item has already been added", func() {
-                    beforeEach(func(t *testing.T, w *gospec.World) {
-                        w.Swap("cart", func(cart any) any { return append(cart.([]string), "Lizard toy") })
-                    })
+			describe("cart updates", func() {
+				describe("given a new item has already been added", func() {
+					beforeEach(func(t *testing.T, w *gospec.World) {
+						w.Swap("cart", func(cart any) any { return append(cart.([]string), "Lizard toy") })
+					})
 
-                    describe("when we remove the second item", func() {
-                        beforeEach(func(t *testing.T, w *gospec.World) {
-                            w.Swap("cart", func(cart any) any { c := cart.([]string); return []string{c[0], c[2]} })
-                        })
+					describe("when we remove the second item", func() {
+						beforeEach(func(t *testing.T, w *gospec.World) {
+							w.Swap("cart", func(cart any) any { c := cart.([]string); return []string{c[0], c[2]} })
+						})
 
-                        it("then the cart should contain the correct two items", func(t *testing.T, w *gospec.World) {
-                            assert.Equal(w.T, []string{"Gopher Toy", "Lizard toy"}, w.Get("cart"))
-                        })
-                    })
-                })
-            })
+						it("then the cart should contain the correct two items", func(t *testing.T, w *gospec.World) {
+							assert.Equal(w.T, []string{"Gopher Toy", "Lizard toy"}, w.Get("cart"))
+						})
+					})
+				})
+			})
 
-            describe("removing items from the cart", func() {
-                describe("given the second item has already been removed", func() {
-                    beforeEach(func(t *testing.T, w *gospec.World) {
-                        w.Swap("cart", func(cart any) any { return cart.([]string)[:1] })
-                    })
+			describe("removing items from the cart", func() {
+				describe("given the second item has already been removed", func() {
+					beforeEach(func(t *testing.T, w *gospec.World) {
+						w.Swap("cart", func(cart any) any { return cart.([]string)[:1] })
+					})
 
-                    describe("when we remove the first item", func() {
-                        beforeEach(func(t *testing.T, w *gospec.World) {
-                            w.Swap("cart", func(cart any) any { return cart.([]string)[:0] })
-                        })
+					describe("when we remove the first item", func() {
+						beforeEach(func(t *testing.T, w *gospec.World) {
+							w.Swap("cart", func(cart any) any { return cart.([]string)[:0] })
+						})
 
-                        it("then the cart should contain 0 items", func(t *testing.T, w *gospec.World) {
-                            assert.Equal(w.T, []string{}, w.Get("cart"))
-                        })
-                    })
-                })
-            })
-        })
-    })
+						it("then the cart should contain 0 items", func(t *testing.T, w *gospec.World) {
+							assert.Equal(w.T, []string{}, w.Get("cart"))
+						})
+					})
+				})
+			})
+		})
+	})
 }
 ```
 </details>
@@ -143,52 +145,53 @@ func TestCartSpec(t *testing.T) {
 
 ```go
 import (
+	"testing"
+
 	"github.com/slavsan/gospec"
-	...
 )
 
 func TestCartFeature(t *testing.T) {
 	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
-        feature, background, scenario, given, when, then, _ :=
-            s.With(gospec.WithPrintedFilenames()).API()
+		feature, background, scenario, given, when, then, _ :=
+			s.With(gospec.WithPrintedFilenames()).API()
 
-        feature("Cart", func() {
-            var cart []string
+		feature("Cart", func() {
+			var cart []string
 
-            background(func() {
-                given("there is a cart with three items", func(t *testing.T) {
-                    cart = []string{
-                        "Gopher Toy",
-                        "Crab Toy",
-                    }
-                })
-            })
+			background(func() {
+				given("there is a cart with three items", func(t *testing.T) {
+					cart = []string{
+						"Gopher Toy",
+						"Crab Toy",
+					}
+				})
+			})
 
-            scenario("cart updates", func() {
-                given("a new item has already been added", func(t *testing.T) {
-                    cart = append(cart, "Lizard toy")
-                })
-                when("we remove the second item", func(t *testing.T) {
-                    cart = []string{cart[0], cart[2]}
-                })
-                then("the cart should contain the correct two items", func(t *testing.T) {
-                    assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, cart)
-                })
-            })
+			scenario("cart updates", func() {
+				given("a new item has already been added", func(t *testing.T) {
+					cart = append(cart, "Lizard toy")
+				})
+				when("we remove the second item", func(t *testing.T) {
+					cart = []string{cart[0], cart[2]}
+				})
+				then("the cart should contain the correct two items", func(t *testing.T) {
+					assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, cart)
+				})
+			})
 
-            scenario("removing items from the cart", func() {
-                given("the second item has already been removed", func(t *testing.T) {
-                    cart = cart[:1]
-                })
-                when("we remove the first item", func(t *testing.T) {
-                    cart = cart[:0]
-                })
-                then("the cart should contain 0 items", func(t *testing.T) {
-                    assert.Equal(t, []string{}, cart)
-                })
-            })
-        })
-    })
+			scenario("removing items from the cart", func() {
+				given("the second item has already been removed", func(t *testing.T) {
+					cart = cart[:1]
+				})
+				when("we remove the first item", func(t *testing.T) {
+					cart = cart[:0]
+				})
+				then("the cart should contain 0 items", func(t *testing.T) {
+					assert.Equal(t, []string{}, cart)
+				})
+			})
+		})
+	})
 }
 ```
 </details>
@@ -198,49 +201,50 @@ func TestCartFeature(t *testing.T) {
 
 ```go
 import (
+	"testing"
+	
 	"github.com/slavsan/gospec"
-	...
 )
 
 func TestCartFeature(t *testing.T) {
 	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
-        feature, background, scenario, given, when, then := s.ParallelAPI()
+		feature, background, scenario, given, when, then := s.ParallelAPI()
 
-        feature("Cart", func() {
-            background(func() {
-                given("there is a cart with three items", func(t *testing.T, w *gospec.World) {
-                    w.Set("cart", []string{
-                        "Gopher Toy",
-                        "Crab Toy",
-                    })
-                })
-            })
+		feature("Cart", func() {
+			background(func() {
+				given("there is a cart with three items", func(t *testing.T, w *gospec.World) {
+					w.Set("cart", []string{
+						"Gopher Toy",
+						"Crab Toy",
+					})
+				})
+			})
 
-            scenario("cart updates", func() {
-                given("a new item has already been added", func(t *testing.T, w *gospec.World) {
-                    w.Swap("cart", func(cart any) any { return append(cart.([]string), "Lizard toy") })
-                })
-                when("we remove the second item", func(t *testing.T, w *gospec.World) {
-                    w.Swap("cart", func(cart any) any { c := cart.([]string); return []string{c[0], c[2]} })
-                })
-                then("the cart should contain the correct two items", func(t *testing.T, w *gospec.World) {
-                    assert.Equal(w.T, []string{"Gopher Toy", "Lizard toy"}, w.Get("cart"))
-                })
-            })
+			scenario("cart updates", func() {
+				given("a new item has already been added", func(t *testing.T, w *gospec.World) {
+					w.Swap("cart", func(cart any) any { return append(cart.([]string), "Lizard toy") })
+				})
+				when("we remove the second item", func(t *testing.T, w *gospec.World) {
+					w.Swap("cart", func(cart any) any { c := cart.([]string); return []string{c[0], c[2]} })
+				})
+				then("the cart should contain the correct two items", func(t *testing.T, w *gospec.World) {
+					assert.Equal(w.T, []string{"Gopher Toy", "Lizard toy"}, w.Get("cart"))
+				})
+			})
 
-            scenario("removing items from the cart", func() {
-                given("the second item has already been removed", func(t *testing.T, w *gospec.World) {
-                    w.Swap("cart", func(cart any) any { return cart.([]string)[:1] })
-                })
-                when("we remove the first item", func(t *testing.T, w *gospec.World) {
-                    w.Swap("cart", func(cart any) any { return cart.([]string)[:0] })
-                })
-                then("the cart should contain 0 items", func(t *testing.T, w *gospec.World) {
-                    assert.Equal(w.T, []string{}, w.Get("cart"))
-                })
-            })
-        })
-    })
+			scenario("removing items from the cart", func() {
+				given("the second item has already been removed", func(t *testing.T, w *gospec.World) {
+					w.Swap("cart", func(cart any) any { return cart.([]string)[:1] })
+				})
+				when("we remove the first item", func(t *testing.T, w *gospec.World) {
+					w.Swap("cart", func(cart any) any { return cart.([]string)[:0] })
+				})
+				then("the cart should contain 0 items", func(t *testing.T, w *gospec.World) {
+					assert.Equal(w.T, []string{}, w.Get("cart"))
+				})
+			})
+		})
+	})
 }
 ```
 </details>
