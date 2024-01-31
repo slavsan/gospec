@@ -12,7 +12,7 @@ func TestSpecSuiteInParallelExample(t *testing.T) {
 		describe, beforeEach, it := s.With(gospec.Parallel(func() {})).API()
 
 		describe("Cart", func() {
-			beforeEach(func(w *gospec.World) {
+			beforeEach(func(t *testing.T, w *gospec.World) {
 				w.Set("cart", []string{
 					"Gopher Toy",
 					"Crab Toy",
@@ -21,17 +21,17 @@ func TestSpecSuiteInParallelExample(t *testing.T) {
 
 			describe("cart updates", func() {
 				describe("given a new item has already been added", func() {
-					beforeEach(func(w *gospec.World) {
+					beforeEach(func(t *testing.T, w *gospec.World) {
 						w.Swap("cart", func(cart any) any { return append(cart.([]string), "Lizard toy") })
 					})
 
 					describe("when we remove the second item", func() {
-						beforeEach(func(w *gospec.World) {
+						beforeEach(func(t *testing.T, w *gospec.World) {
 							w.Swap("cart", func(cart any) any { c := cart.([]string); return []string{c[0], c[2]} })
 						})
 
-						it("then the cart should contain the correct two items", func(w *gospec.World) {
-							assert.Equal(w.T, []string{"Gopher Toy", "Lizard toy"}, w.Get("cart"))
+						it("then the cart should contain the correct two items", func(t *testing.T, w *gospec.World) {
+							assert.Equal(t, []string{"Gopher Toy", "Lizard toy"}, w.Get("cart"))
 						})
 					})
 				})
@@ -39,17 +39,17 @@ func TestSpecSuiteInParallelExample(t *testing.T) {
 
 			describe("removing items from the cart", func() {
 				describe("given the second item has already been removed", func() {
-					beforeEach(func(w *gospec.World) {
+					beforeEach(func(t *testing.T, w *gospec.World) {
 						w.Swap("cart", func(cart any) any { return cart.([]string)[:1] })
 					})
 
 					describe("when we remove the first item", func() {
-						beforeEach(func(w *gospec.World) {
+						beforeEach(func(t *testing.T, w *gospec.World) {
 							w.Swap("cart", func(cart any) any { return cart.([]string)[:0] })
 						})
 
-						it("then the cart should contain 0 items", func(w *gospec.World) {
-							assert.Equal(w.T, []string{}, w.Get("cart"))
+						it("then the cart should contain 0 items", func(t *testing.T, w *gospec.World) {
+							assert.Equal(t, []string{}, w.Get("cart"))
 						})
 					})
 				})

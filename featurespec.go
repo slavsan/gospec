@@ -25,12 +25,12 @@ const (
 	isTable
 )
 
-type Feature func(title string, cb any)
-type Background func(any)
-type Scenario func(title string, cb any)
-type Given func(title string, cb any)
-type When func(title string, cb any)
-type Then func(title string, cb any)
+type Feature func(title string, cb func())
+type Background func(cb func())
+type Scenario func(title string, cb func())
+type Given func(title string, cb func(*testing.T, *World))
+type When func(title string, cb func(*testing.T, *World))
+type Then func(title string, cb func(*testing.T, *World))
 type Table func(items any, columns ...string)
 
 type featureStep struct {
@@ -43,7 +43,8 @@ type featureStep struct {
 	failed   bool
 	failedAt int
 	executed bool
-	cb       any
+	cb       func(*testing.T, *World)
+	cb2      func()
 	done     func()
 	n        *node2
 }
@@ -151,7 +152,7 @@ func WithFeatureSuite(t *testing.T, f func(fs *FeatureSuite)) {
 
 // Feature defines a feature block, this is the top-level block and should
 // define a separate piece of functionality.
-func (fs *FeatureSuite) feature(title string, cb any) {
+func (fs *FeatureSuite) feature(title string, cb func()) {
 	fs.t.Helper()
 	if fs.prevKind() != isUndefined {
 		fs.invalid = true
@@ -184,7 +185,7 @@ func (fs *FeatureSuite) feature(title string, cb any) {
 	fs.pushStack2(n)
 
 	// TODO: validate cb is of correct type
-	cb.(func())()
+	cb()
 
 	// check if last there is a new suite added, if not, copy the stack here...
 	fs.popBackgroundFromStackIfExists()
@@ -298,7 +299,7 @@ func (fs *FeatureSuite) findIndexOfStep(s *featureStep) int {
 
 // Background defines a block which would get executed before each [FeatureSuite.Scenario].
 // It can contain multiple [FeatureSuite.Given] steps.
-func (fs *FeatureSuite) background(cb any) {
+func (fs *FeatureSuite) background(cb func()) {
 	fs.t.Helper()
 	if fs.prevKind() != isFeature {
 		fs.t.Errorf("invalid position for `Background` function, it must be inside a `Feature` call")
@@ -329,7 +330,7 @@ func (fs *FeatureSuite) background(cb any) {
 
 	fs.pushStack2(n)
 
-	cb.(func())()
+	cb()
 
 	fs.popStackUntilStep2(n)
 	fs.popStack2(n)
@@ -376,7 +377,7 @@ func (fs *FeatureSuite) findIndexOfNode(n *node2) int {
 
 // Scenario defines a scenario block. It should test a particular feature in a particular
 // scenario, provided a set of given/when/then steps.
-func (fs *FeatureSuite) scenario(title string, cb any) {
+func (fs *FeatureSuite) scenario(title string, cb func()) {
 	fs.t.Helper()
 	if fs.prevKind() != isFeature && fs.prevKind() != isBackground {
 		fs.invalid = true
@@ -407,7 +408,7 @@ func (fs *FeatureSuite) scenario(title string, cb any) {
 
 	fs.pushStack2(n)
 
-	cb.(func())()
+	cb()
 
 	fs.popStack2(n)
 	fs.currNode = fs.nodesStack[len(fs.nodesStack)-1]
@@ -423,7 +424,7 @@ func (fs *FeatureSuite) scenario(title string, cb any) {
 // Given defines a block which is meant to build the prerequisites for a particular
 // test. It's usual to have any test setup logic defined in a [FeatureSuite.Given]
 // block.
-func (fs *FeatureSuite) given(title string, cb any) {
+func (fs *FeatureSuite) given(title string, cb func(*testing.T, *World)) {
 	fs.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -443,24 +444,25 @@ func (fs *FeatureSuite) given(title string, cb any) {
 	}
 
 	if fs.parallel {
-		s.cb = func(w *World) {
-			w.T.Helper()
+		s.cb = func(t *testing.T, w *World) {
+			w.t.Helper()
 
 			//defer s.done()
 
-			cb.(func(*World))(w)
+			cb(t, w)
 			//s.executed = true
 
-			if w.T.Failed() {
+			if w.t.Failed() {
 				//s.failed = true
 				//fs.failedCount++
 				//s.failedAt = fs.failedCount
 			}
 		}
 	} else {
-		s.cb = func() {
+		s.cb = func(t *testing.T, w *World) {
 			fs.t.Helper()
-			cb.(func())()
+			//cb.(func())()
+			cb(t, w)
 			s.executed = true
 
 			if fs.t.Failed() {
@@ -484,7 +486,7 @@ func (fs *FeatureSuite) given(title string, cb any) {
 }
 
 // When defines a block which should exercise the actual test.
-func (fs *FeatureSuite) when(title string, cb any) {
+func (fs *FeatureSuite) when(title string, cb func(*testing.T, *World)) {
 	fs.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -516,7 +518,7 @@ func (fs *FeatureSuite) when(title string, cb any) {
 }
 
 // Then defines a block which should hold a set of assertions.
-func (fs *FeatureSuite) then(title string, cb any) {
+func (fs *FeatureSuite) then(title string, cb func(*testing.T, *World)) {
 	fs.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -692,10 +694,10 @@ func (fs *FeatureSuite) start() {
 				//t.Skip()
 			}
 
-			if fs.parallel {
-				world := newWorld()
-				world.T = t
+			world := newWorld()
+			world.t = t
 
+			if fs.parallel {
 				t.Parallel()
 				for _, s := range suite {
 					if s.kind == isGiven || s.kind == isWhen || s.kind == isThen {
@@ -705,14 +707,14 @@ func (fs *FeatureSuite) start() {
 
 						world.currentFeatureStep = s
 
-						s.cb.(func(w *World))(world)
+						s.cb(t, world)
 
 						world.currentFeatureStep = nil
 
 						continue
 					}
-					if s.cb != nil {
-						s.cb.(func())()
+					if s.cb2 != nil {
+						s.cb2()
 					}
 				}
 				fs.wg.Done()
@@ -727,7 +729,7 @@ func (fs *FeatureSuite) start() {
 
 					fs.currentStep = s
 
-					s.cb.(func())()
+					s.cb(t, world)
 
 					fs.currentStep = nil
 				}

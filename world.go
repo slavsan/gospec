@@ -13,7 +13,7 @@ import (
 // in parallel tests. Changes to the contents of World are
 // concurrently safe to make.
 type World struct {
-	T                  *testing.T
+	t                  *testing.T
 	values             map[string]any
 	mu                 sync.Mutex
 	currentFeatureStep *featureStep
@@ -27,7 +27,7 @@ func newWorld() *World {
 }
 
 func (w *World) Table(fs *FeatureSuite, items any, columns ...string) {
-	w.T.Helper()
+	w.t.Helper()
 
 	// TODO: validate table was called in valid call site
 
@@ -39,7 +39,7 @@ func (w *World) Table(fs *FeatureSuite, items any, columns ...string) {
 	items2 := reflect.ValueOf(items)
 
 	if items2.Kind() != reflect.Slice {
-		w.T.Errorf("expected items to be of type slice but was of type: %v", reflect.TypeOf(items))
+		w.t.Errorf("expected items to be of type slice but was of type: %v", reflect.TypeOf(items))
 		return
 	}
 
@@ -135,7 +135,7 @@ func (w *World) Get(name string) any {
 	defer w.mu.Unlock()
 	value, ok := w.values[name]
 	if !ok {
-		w.T.Errorf("world does not have value set for '%s'", name)
+		w.t.Errorf("world does not have value set for '%s'", name)
 	}
 	return value
 }
@@ -156,7 +156,7 @@ func (w *World) Swap(name string, f func(any) any) {
 	defer w.mu.Unlock()
 	value, ok := w.values[name]
 	if !ok {
-		w.T.Errorf("can not swap value, since world does not have value set for '%s', try setting it first", name)
+		w.t.Errorf("can not swap value, since world does not have value set for '%s', try setting it first", name)
 	}
 	newValue := f(value)
 	w.values[name] = newValue

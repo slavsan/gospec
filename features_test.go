@@ -137,9 +137,9 @@ func TestScenarioCanContainGivenWhenThen(t *testing.T) {
 
 			feature("Checkout", func() {
 				scenario("scenario 1", func() {
-					given("given 1", func() {})
-					when("when 1", func() {})
-					then("then 1", func() {})
+					given("given 1", func(t *T, w *W) {})
+					when("when 1", func(t *T, w *W) {})
+					then("then 1", func(t *T, w *W) {})
 				})
 			})
 		})
@@ -186,15 +186,15 @@ func TestMultipleScenarioWithGivenWhenThen(t *testing.T) {
 
 			feature("Checkout", func() {
 				scenario("scenario 1", func() {
-					given("given 1", func() {})
-					when("when 1", func() {})
-					then("then 1", func() {})
+					given("given 1", func(t *T, w *W) {})
+					when("when 1", func(t *T, w *W) {})
+					then("then 1", func(t *T, w *W) {})
 				})
 
 				scenario("scenario 2", func() {
-					given("given 2", func() {})
-					when("when 2", func() {})
-					then("then 2", func() {})
+					given("given 2", func(t *T, w *W) {})
+					when("when 2", func(t *T, w *W) {})
+					then("then 2", func(t *T, w *W) {})
 				})
 			})
 		})
@@ -251,15 +251,15 @@ func TestScenarioWhichHasBackgroundBlock(t *testing.T) {
 
 			feature("Checkout", func() {
 				background(func() {
-					given("given 0", func() {})
-					when("when 0", func() {})
-					then("then 0", func() {})
+					given("given 0", func(t *T, w *W) {})
+					when("when 0", func(t *T, w *W) {})
+					then("then 0", func(t *T, w *W) {})
 				})
 
 				scenario("scenario 1", func() {
-					given("given 1", func() {})
-					when("when 1", func() {})
-					then("then 1", func() {})
+					given("given 1", func(t *T, w *W) {})
+					when("when 1", func(t *T, w *W) {})
+					then("then 1", func(t *T, w *W) {})
 				})
 			})
 		})
@@ -311,21 +311,21 @@ func TestMultipleScenariosWhichShareTheSameBackgroundBlock(t *testing.T) {
 
 			feature("Checkout", func() {
 				background(func() {
-					given("given 0", func() {})
-					when("when 0", func() {})
-					then("then 0", func() {})
+					given("given 0", func(t *T, w *W) {})
+					when("when 0", func(t *T, w *W) {})
+					then("then 0", func(t *T, w *W) {})
 				})
 
 				scenario("scenario 1", func() {
-					given("given 1", func() {})
-					when("when 1", func() {})
-					then("then 1", func() {})
+					given("given 1", func(t *T, w *W) {})
+					when("when 1", func(t *T, w *W) {})
+					then("then 1", func(t *T, w *W) {})
 				})
 
 				scenario("scenario 2", func() {
-					given("given 2", func() {})
-					when("when 2", func() {})
-					then("then 2", func() {})
+					given("given 2", func(t *T, w *W) {})
+					when("when 2", func(t *T, w *W) {})
+					then("then 2", func(t *T, w *W) {})
 				})
 			})
 		})
@@ -403,39 +403,39 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 				var nums []int
 
 				background(func() {
-					given("given 1", func() {
+					given("given 1", func(t *T, w *W) {
 						nums = []int{}
 						nums = append(nums, 1)
 					})
-					when("when 1", func() {
+					when("when 1", func(t *T, w *W) {
 						nums = append(nums, 2)
 					})
-					then("then 1", func() {
+					then("then 1", func(t *T, w *W) {
 						nums = append(nums, 3)
 					})
 				})
 
 				scenario("scenario 1", func() {
-					given("given 2", func() {
+					given("given 2", func(t *T, w *W) {
 						nums = append(nums, 4)
 					})
-					when("when 2", func() {
+					when("when 2", func(t *T, w *W) {
 						nums = append(nums, 5)
 					})
-					then("then 2", func() {
+					then("then 2", func(t *T, w *W) {
 						nums = append(nums, 6)
 						mockAssert.Assert(nums)
 					})
 				})
 
 				scenario("scenario 2", func() {
-					given("given 2", func() {
+					given("given 2", func(t *T, w *W) {
 						nums = append(nums, 7)
 					})
-					when("when 2", func() {
+					when("when 2", func(t *T, w *W) {
 						nums = append(nums, 8)
 					})
-					then("then 2", func() {
+					then("then 2", func(t *T, w *W) {
 						nums = append(nums, 9)
 						mockAssert.Assert(nums)
 					})
@@ -446,39 +446,39 @@ func TestFeaturesGetExecutedInCorrectOrder(t *testing.T) {
 				var nums []int
 
 				background(func() {
-					given("given 11", func() {
+					given("given 11", func(t *T, w *W) {
 						nums = []int{}
 						nums = append(nums, 11)
 					})
-					when("when 11", func() {
+					when("when 11", func(t *T, w *W) {
 						nums = append(nums, 12)
 					})
-					then("then 11", func() {
+					then("then 11", func(t *T, w *W) {
 						nums = append(nums, 13)
 					})
 				})
 
 				scenario("scenario 11", func() {
-					given("given 12", func() {
+					given("given 12", func(t *T, w *W) {
 						nums = append(nums, 14)
 					})
-					when("when 12", func() {
+					when("when 12", func(t *T, w *W) {
 						nums = append(nums, 15)
 					})
-					then("then 12", func() {
+					then("then 12", func(t *T, w *W) {
 						nums = append(nums, 16)
 						mockAssert.Assert(nums)
 					})
 				})
 
 				scenario("scenario 12", func() {
-					given("given 12", func() {
+					given("given 12", func(t *T, w *W) {
 						nums = append(nums, 17)
 					})
-					when("when 12", func() {
+					when("when 12", func(t *T, w *W) {
 						nums = append(nums, 18)
 					})
-					then("then 12", func() {
+					then("then 12", func(t *T, w *W) {
 						nums = append(nums, 19)
 						mockAssert.Assert(nums)
 					})
@@ -564,7 +564,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 
 			feature("Checkout 1", func() {
 				background(func() {
-					given("given 1", func(w *World) {
+					given("given 1", func(t *T, w *World) {
 						var items []Product
 						items = []Product{
 							{Name: "Gopher toy", Price: 1.99, Type: 10},
@@ -573,12 +573,12 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 						w.Table(s, items, "Name", "Price")
 						w.Set("nums", []int{1})
 					})
-					when("when 1", func(w *World) {
+					when("when 1", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 2)
 						})
 					})
-					then("then 1", func(w *World) {
+					then("then 1", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 3)
 						})
@@ -586,17 +586,17 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 				})
 
 				scenario("scenario 1", func() {
-					given("given 2", func(w *World) {
+					given("given 2", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 4)
 						})
 					})
-					when("when 2", func(w *World) {
+					when("when 2", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 5)
 						})
 					})
-					then("then 2", func(w *World) {
+					then("then 2", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 6)
 						})
@@ -605,17 +605,17 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 				})
 
 				scenario("scenario 2", func() {
-					given("given 2", func(w *World) {
+					given("given 2", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 7)
 						})
 					})
-					when("when 2", func(w *World) {
+					when("when 2", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 8)
 						})
 					})
-					then("then 2", func(w *World) {
+					then("then 2", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 9)
 						})
@@ -626,15 +626,15 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 
 			feature("Checkout 2", func() {
 				background(func() {
-					given("given 11", func(w *World) {
+					given("given 11", func(t *T, w *World) {
 						w.Set("nums", []int{11})
 					})
-					when("when 11", func(w *World) {
+					when("when 11", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 12)
 						})
 					})
-					then("then 11", func(w *World) {
+					then("then 11", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 13)
 						})
@@ -642,17 +642,17 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 				})
 
 				scenario("scenario 11", func() {
-					given("given 12", func(w *World) {
+					given("given 12", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 14)
 						})
 					})
-					when("when 12", func(w *World) {
+					when("when 12", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 15)
 						})
 					})
-					then("then 12", func(w *World) {
+					then("then 12", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 16)
 						})
@@ -661,7 +661,7 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 				})
 
 				scenario("scenario 12", func() {
-					given("given 12", func(w *World) {
+					given("given 12", func(t *T, w *World) {
 						var items []Product
 
 						w.Swap("nums", func(current any) any {
@@ -674,12 +674,12 @@ func TestFeaturesGetExecutedInParallel(t *testing.T) {
 						}
 						w.Table(s, items, "Name", "Price")
 					})
-					when("when 12", func(w *World) {
+					when("when 12", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 18)
 						})
 					})
-					then("then 12", func(w *World) {
+					then("then 12", func(t *T, w *World) {
 						w.Swap("nums", func(current any) any {
 							return append(current.([]int), 19)
 						})
@@ -796,11 +796,11 @@ func TestTableOutput(t *testing.T) {
 				var items []Product
 
 				scenario("scenario 1", func() {
-					given("given 1", func() {
+					given("given 1", func(t *T, w *W) {
 						// ..
 					})
-					when("when 1", func() {})
-					then("then 1", func() {
+					when("when 1", func(t *T, w *W) {})
+					then("then 1", func(t *T, w *W) {
 						items = []Product{
 							{Name: "Gopher toy", Price: 14.99, Type: 2},
 							{Name: "Crab toy", Price: 17.49, Type: 8},

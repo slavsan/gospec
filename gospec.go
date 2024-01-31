@@ -13,8 +13,8 @@ import (
 type W = World
 
 type Describe func(title string, cb func())
-type BeforeEach func(cb func(w *World))
-type It func(title string, cb func(w *World))
+type BeforeEach func(cb func(t *testing.T, w *World))
+type It func(title string, cb func(t *testing.T, w *World))
 
 // SpecSuite is a spec suite which follows the rspec syntax, i.e.
 // describe, beforeEach, it blocks, etc. It has several methods
@@ -78,7 +78,7 @@ type step struct {
 	failed   bool
 	failedAt int
 	executed bool
-	cb       func(w *World)
+	cb       func(t *testing.T, w *World)
 	cb2      func()
 	done     func()
 }
@@ -207,7 +207,7 @@ func (suite *SpecSuite) start() {
 			}
 
 			world := newWorld()
-			world.T = t
+			world.t = t
 
 			if suite.parallel {
 				t.Parallel()
@@ -218,7 +218,7 @@ func (suite *SpecSuite) start() {
 								suite.wg.Done()
 							}
 						}
-						s.cb(world)
+						s.cb(t, world)
 						continue
 					}
 					if s.cb2 != nil {
@@ -233,7 +233,7 @@ func (suite *SpecSuite) start() {
 				if s.cb != nil {
 					if s.block == isIt || s.block == isBeforeEach {
 						//s.t = t
-						s.cb(world)
+						s.cb(t, world)
 						continue
 					}
 				}
@@ -472,7 +472,7 @@ func (suite *SpecSuite) lastSuiteContainsStep(step *step) bool {
 // It is used for assigning values to variables which are then used in the following
 // blocks. If the [SpecSuite.BeforeEach] block is not followed by a [SpecSuite.It] block, it
 // will not get executed.
-func (suite *SpecSuite) beforeEach(cb func(*World)) {
+func (suite *SpecSuite) beforeEach(cb func(*testing.T, *World)) {
 	suite.t.Helper()
 
 	s := &step{
@@ -486,7 +486,7 @@ func (suite *SpecSuite) beforeEach(cb func(*World)) {
 
 // It defines a block which gets executed in a test suite as the last step. [SpecSuite.It] blocks
 // can not be nested.
-func (suite *SpecSuite) it(title string, cb func(w *World)) {
+func (suite *SpecSuite) it(title string, cb func(t *testing.T, w *World)) {
 	suite.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -512,18 +512,18 @@ func (suite *SpecSuite) it(title string, cb func(w *World)) {
 
 	suite.currNode.children = append(suite.currNode.children, n)
 
-	s.cb = func(w *World) {
-		w.T.Helper()
+	s.cb = func(t *testing.T, w *World) {
+		w.t.Helper()
 
 		if suite.parallel {
 			defer s.done()
 		}
 
-		cb(w)
+		cb(t, w)
 
 		s.executed = true
 
-		if w.T.Failed() {
+		if w.t.Failed() {
 			s.failed = true
 			suite.failedCount++
 			s.failedAt = suite.failedCount
