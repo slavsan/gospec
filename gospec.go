@@ -10,22 +10,23 @@ import (
 	"testing"
 )
 
-// W ...
-type W = World
-
-// Describe ..
+// Describe is used to define a describe block in a [SpecSuite].
 type Describe func(title string, cb func())
 
-// BeforeEach ..
+// BeforeEach defines a block of code to be executed before all `it` ([It] or [ParallelIt]) blocks.
 type BeforeEach func(cb func(t *testing.T))
 
-// It ..
+// It defines a block which gets executed.
 type It func(title string, cb func(t *testing.T))
 
-// ParallelBeforeEach ..
+// ParallelBeforeEach is the same as [BeforeEach] but is used for parallel tests. It accepts
+// additionally a *[World] instance which is used for passing state between the different steps
+// of a test suite.
 type ParallelBeforeEach func(cb func(t *testing.T, w *World))
 
-// ParallelIt ..
+// ParallelIt is the same as [It] but is used for parallel tests. It accepts
+// additionally a *[World] instance which is used for passing state between the different steps
+// of a test suite.
 type ParallelIt func(title string, cb func(t *testing.T, w *World))
 
 // SpecSuite is a spec suite which follows the rspec syntax, i.e.
@@ -50,16 +51,24 @@ type SpecSuite struct {
 	wg             *sync.WaitGroup
 }
 
-func WithSpecSuite(t *testing.T, f func(s *SpecSuite)) {
+// WithSpecSuite defines a new [SpecSuite] instance, by passing that new instance through the callback.
+//
+// Example:
+//
+//	WithSpecSuite(t, func(s *gospec.SpecSuite) {
+//		/* use the SpecSuite s here for defining one or more specs */
+//	})
+func WithSpecSuite(t *testing.T, callback func(s *SpecSuite)) {
 	t.Helper()
 
 	s := newTestSuite(t)
 
 	defer s.start2()
 
-	f(s)
+	callback(s)
 }
 
+// With is used for setting the options for a [SpecSuite]. It will error if called twice.
 func (suite *SpecSuite) With(options ...SuiteOption) *SpecSuite {
 	for _, o := range options {
 		o(suite)
@@ -132,40 +141,23 @@ func (suite *SpecSuite) start2() {
 
 // API returns the exposed methods on the [SpecSuite] instance. It's intended usage is as follows:
 //
-//	describe, beforeEach, it := gospec.NewTestSuite(t).API()
+//	describe, beforeEach, it := s.API()
 //
 //	describe("my feature", func() {
-//		beforeEach(func() {
-//			// ..
+//		beforeEach(func(t *testing.T) {
+//			/* execute any preconditions */
+//			/* or execute code under test */
 //		})
 //
-//		// ..
+//		it("should do this and that", func(t *testing.T) {
+//			/* execute code under test and assert */
+//			/* or just assert */
+//		})
 //	})
 //
 // The reason for this lies in the influence gospec has from rspec, mocha, and other
 // BDD frameworks, which have a similar API and general look and feel (namely the
-// lowercase describe, beforeEach, it functions).
-//
-// Alternatively you can export the Describe, BeforeEach, and It like so
-//
-//	var (
-//		spec = gospec.NewTestSuite(t)
-//		describe = spec.Describe
-//		beforeEach = spec.BeforeEach
-//		it = spec.It
-//	)
-//
-// Or, you can just instantiate the suite instance and use the public methods on it directly
-//
-//	spec := gospec.NewTestSuite(t)
-//
-//	spec.Describe("my feature", func() {
-//		spec.BeforeEach(func() {
-//			// ..
-//		})
-//
-//		// ..
-//	})
+// lowercase `describe`, `beforeEach`, and `it` functions).
 func (suite *SpecSuite) API() (
 	Describe,
 	BeforeEach,
@@ -174,6 +166,10 @@ func (suite *SpecSuite) API() (
 	return suite.describe, suite.beforeEach, suite.it
 }
 
+// ParallelAPI returns the exposed functions for defining spec suites which are meant
+// to run in parallel. The [ParallelBeforeEach] and [ParallelIt] functions
+// accept a *[World] instance in the callback arguments. This is necessary
+// so that the steps of the test (suite) can pass the test-scoped state.
 func (suite *SpecSuite) ParallelAPI(done func()) (
 	Describe,
 	ParallelBeforeEach,
@@ -380,9 +376,7 @@ func (suite *SpecSuite) describe(title string, cb func()) {
 	_ = file
 	_ = lineNo
 
-	n := &node{
-		// ..
-	}
+	n := &node{}
 
 	if suite.isTopLevel() {
 		// top level, so the node should go at the suites level
@@ -494,9 +488,7 @@ func (suite *SpecSuite) parallelIt(title string, cb func(t *testing.T, w *World)
 
 	// TODO: check if parallel and make sure `cb` is defined with *World as the first arg
 
-	n := &node{
-		// ..
-	}
+	n := &node{}
 
 	s := &step{
 		title:  title,
@@ -547,9 +539,7 @@ func (suite *SpecSuite) it(title string, cb func(t *testing.T)) {
 
 	// TODO: check if parallel and make sure `cb` is defined with *World as the first arg
 
-	n := &node{
-		// ..
-	}
+	n := &node{}
 
 	s := &step{
 		title:  title,

@@ -795,9 +795,7 @@ func TestTableOutput(t *testing.T) {
 				var items []Product
 
 				scenario("scenario 1", func() {
-					given("given 1", func(t *T) {
-						// ..
-					})
+					given("given 1", func(t *T) {})
 					when("when 1", func(t *T) {})
 					then("then 1", func(t *T) {
 						items = []Product{

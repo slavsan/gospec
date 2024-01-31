@@ -36,14 +36,14 @@ func TestExampleSuite(t *testing.T) {
 					context("when the coupon is eligible for this purchase", func() {
 						context("and the coupon gets applied", func() {
 							context("but the coupon value is higher than the purchase value", func() {
-								// ..
+								/* not defined */
 							})
 							context("and the coupon value is less than the purchase value", func() {
 								beforeEach(func(t *T) {
-									// ..
+									/* not defined */
 								})
 								describe("when completing the purchase", func() {
-									// ..
+									/* not defined */
 								})
 							})
 						})
@@ -372,14 +372,14 @@ func TestIt(t *testing.T) { //nolint:maintidx
 									context2("when the coupon is eligible for this purchase", func() {
 										context2("and the coupon gets applied", func() {
 											context2("but the coupon value is higher than the purchase value", func() {
-												// ..
+												/* not defined */
 											})
 											context2("and the coupon value is less than the purchase value", func() {
 												beforeEach2(func(t *T) {
-													// ..
+													/* not defined */
 												})
 												describe2("when completing the purchase", func() {
-													// ..
+													/* not defined */
 												})
 											})
 										})

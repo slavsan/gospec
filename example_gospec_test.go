@@ -11,7 +11,7 @@ import (
 // test and its purpose is purely presentational.
 
 // ExampleTestSuite shows an example gospec.SpecSuite.
-func Example_suite() {
+func Example_specSuite() {
 	gospec.WithSpecSuite(t, func(s *gospec.SpecSuite) {
 		describe, beforeEach, it := s.API()
 

@@ -9,6 +9,9 @@ import (
 	"testing"
 )
 
+// W is an alias for the [World] struct type.
+type W = World
+
 // World is a structure which acts as a variables container
 // in parallel tests. Changes to the contents of World are
 // concurrently safe to make.
@@ -26,15 +29,17 @@ func newWorld() *World {
 	}
 }
 
+// Table is used for displaying a Gherkin style table in parallel tests.
+// It does the same thing as the [Table] function, but It's used only in parallel tests
+// when an instance of a test-scoped [World] struct is passed to the callback.
+// The Table method is supposed to be used only in [FeatureSuite] tests.
 func (w *World) Table(fs *FeatureSuite, items any, columns ...string) { //nolint:gocognit,cyclop
 	w.t.Helper()
 
 	// TODO: validate table was called in valid call site
 
 	var sb strings.Builder
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	items2 := reflect.ValueOf(items)
 

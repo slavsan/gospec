@@ -13,11 +13,9 @@ type mock struct {
 }
 
 func (m *mock) Helper() {
-	// ..
 }
 
 func (m *mock) Parallel() {
-	// ..
 }
 
 func (m *mock) Failed() bool {
@@ -54,5 +52,4 @@ func (m *assertMock) Assert(args ...any) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls = append(m.calls, args)
-	// ..
 }

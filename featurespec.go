@@ -25,34 +25,50 @@ const (
 	isTable
 )
 
-// Feature ..
+// Feature is a helper function to define a new feature.
 type Feature func(title string, cb func())
 
-// Background ..
+// Background is a helper function to define the background (set of preconditions) for one or more scenarios.
 type Background func(cb func())
 
-// Scenario ..
+// Scenario is used to define a specific test case.
 type Scenario func(title string, cb func())
 
-// Given ..
+// Given is used to define a precondition for a test case.
 type Given func(title string, cb func(*testing.T))
 
-// When ..
+// When is used for defining the actual test exercise code block.
 type When func(title string, cb func(*testing.T))
 
-// Then ..
+// Then is used to define a set of assertions.
 type Then func(title string, cb func(*testing.T))
 
-// Table ..
+// Table is used for output purposes only. It will output a table in the generated Gherkin code.
+// Example:
+//
+//	items = []Product{
+//		{Name: "Gopher toy", Price: 14.99, Type: 2},
+//		{Name: "Crab toy", Price: 17.49, Type: 8},
+//	}
+//	table(items, "Name", "Price")
+//
+// will output
+//
+//	| Name       | Price |
+//	| Gopher toy | 14.99 |
+//	| Crab toy   | 17.49 |
+//
+// whereby the variadic arguments passed after the list of items to get displayed
+// in the table, is the list of public fields on the struct.
 type Table func(items any, columns ...string)
 
-// ParallelGiven ..
+// ParallelGiven is used to define a precondition for a test case. It's used in tests that are meant to be executed in parallel, via the [FeatureSuite.ParallelAPI].
 type ParallelGiven func(title string, cb func(*testing.T, *World))
 
-// ParallelWhen ..
+// ParallelWhen is used for defining the actual test exercise code block. It's used in tests that are meant to be executed in parallel, via the [FeatureSuite.ParallelAPI].
 type ParallelWhen func(title string, cb func(*testing.T, *World))
 
-// ParallelThen ..
+// ParallelThen is used to define a set of assertions. It's used in tests that are meant to be executed in parallel, via the [FeatureSuite.ParallelAPI].
 type ParallelThen func(title string, cb func(*testing.T, *World))
 
 type featureStep struct {
@@ -78,9 +94,8 @@ type featureStep struct {
 // an API (methods) which resemble this way of structuring tests for
 // defining the behaviour of production code.
 //
-// Those methods are: [FeatureSuite.Feature], [FeatureSuite.Background],
-// [FeatureSuite.Scenario], [FeatureSuite.Given], [FeatureSuite.When],
-// [FeatureSuite.Then].
+// Those functions are: [Feature], [Background], [Scenario], [Given],
+// [When] and [Then].
 type FeatureSuite struct {
 	t               testingInterface
 	parallel        bool
@@ -114,34 +129,31 @@ func newFeatureSuite(t *testing.T) *FeatureSuite {
 	return fs
 }
 
-// API returns the exposed methods on the [FeatureSuite] instance. It's intended usage is as follows:
+// API returns the exposed functions on the [FeatureSuite] instance. It's intended usage is as follows:
 //
-//	feature, background, scenario, given, when, then, _ :=
-//		gospec.NewFeatureSuite(t).API()
+//	feature, background, scenario, given, when, then := s.API()
 //
 //	feature("my feature", func() {
 //		var cart []string
 //
 //		background(func() {
 //			given("some precondition", func() {
-//				// ...
+//				/* set a precondition which will be applied for all scenarios */
 //			})
 //		})
 //
-//		scenario("when ..", func() {
+//		scenario("when in given scenario", func() {
 //			given("another nested precondition", func() {
-//				// ...
+//				/* set another precondition which will be applied for only this scenario */
 //			})
 //			when("something gets executed", func() {
-//				// ...
+//				/* exercise the actual code that is under test */
 //			})
 //			then("something should happen", func() {
-//				// ...
+//				/* assert all expectations have been met */
 //			})
 //		})
 //	})
-//
-// ..
 func (fs *FeatureSuite) API() (
 	Feature,
 	Background,
@@ -155,7 +167,10 @@ func (fs *FeatureSuite) API() (
 		fs.when, fs.then, fs.table
 }
 
-// ParallelAPI ...
+// ParallelAPI returns the exposed functions for defining feature suites which are meant
+// to run in parallel. The [ParallelGiven], [ParallelWhen], [ParallelThen] functions
+// accept a *[World] instance in the callback arguments. This is necessary
+// so that the steps of the test (suite) can pass the test-scoped state.
 func (fs *FeatureSuite) ParallelAPI(done func()) (
 	Feature,
 	Background,
@@ -178,14 +193,21 @@ func (fs *FeatureSuite) prevKind() featureStepKind {
 	return fs.stack[len(fs.stack)-1].kind
 }
 
-func WithFeatureSuite(t *testing.T, f func(fs *FeatureSuite)) {
+// WithFeatureSuite defines a new [FeatureSuite] instance, by passing that new instance through the callback.
+//
+// Example:
+//
+//	WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
+//		/* use the FeatureSuite s here for defining one or more features */
+//	})
+func WithFeatureSuite(t *testing.T, callback func(fs *FeatureSuite)) {
 	t.Helper()
 
 	fs := newFeatureSuite(t)
 
 	defer fs.start()
 
-	f(fs)
+	callback(fs)
 }
 
 // Feature defines a feature block, this is the top-level block and should
@@ -202,9 +224,7 @@ func (fs *FeatureSuite) feature(title string, cb func()) {
 	_ = file
 	_ = lineNo
 
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	fs.nodes = append(fs.nodes, n)
 
@@ -348,9 +368,7 @@ func (fs *FeatureSuite) background(cb func()) {
 	_ = file
 	_ = lineNo
 
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	s := &featureStep{
 		kind:   isBackground,
@@ -427,9 +445,7 @@ func (fs *FeatureSuite) scenario(title string, cb func()) {
 	_ = file
 	_ = lineNo
 
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	s := &featureStep{
 		kind:   isScenario,
@@ -469,9 +485,7 @@ func (fs *FeatureSuite) given(title string, cb func(*testing.T)) {
 	_ = file
 	_ = lineNo
 
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	s := &featureStep{
 		kind:   isGiven,
@@ -511,9 +525,7 @@ func (fs *FeatureSuite) parallelGiven(title string, cb func(*testing.T, *World))
 	_ = file
 	_ = lineNo
 
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	s := &featureStep{
 		kind:   isGiven,
@@ -555,9 +567,7 @@ func (fs *FeatureSuite) when(title string, cb func(*testing.T)) {
 	_ = file
 	_ = lineNo
 
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	s := &featureStep{
 		kind:   isWhen,
@@ -586,9 +596,7 @@ func (fs *FeatureSuite) parallelWhen(title string, cb func(*testing.T, *World)) 
 	_ = file
 	_ = lineNo
 
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	s := &featureStep{
 		kind:       isWhen,
@@ -618,9 +626,7 @@ func (fs *FeatureSuite) then(title string, cb func(*testing.T)) {
 	_ = file
 	_ = lineNo
 
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	s := &featureStep{
 		kind:   isThen,
@@ -649,9 +655,7 @@ func (fs *FeatureSuite) parallelThen(title string, cb func(*testing.T, *World)) 
 	_ = file
 	_ = lineNo
 
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	s := &featureStep{
 		kind:       isThen,
@@ -695,9 +699,7 @@ func (fs *FeatureSuite) table(items any, columns ...string) { //nolint:gocognit,
 	// TODO: validate table was called in valid call site
 
 	var sb strings.Builder
-	n := &node2{
-		// ..
-	}
+	n := &node2{}
 
 	items2 := reflect.ValueOf(items)
 
@@ -795,6 +797,7 @@ func buildSuiteTitleForFeature(suite []*featureStep) string {
 	return sb.String()
 }
 
+// With is used for setting the options for a [FeatureSuite]. It will error if called twice.
 func (fs *FeatureSuite) With(options ...SuiteOption) *FeatureSuite {
 	for _, o := range options {
 		o(fs)
