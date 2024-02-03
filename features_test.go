@@ -896,10 +896,10 @@ func TestColorfulOutput(t *testing.T) {
 	}, testingMock.testTitles)
 
 	assert.Equal(t, strings.Join([]string{
-		"\x1b[1m" + `Feature:` + "\x1b[0m" + ` Checkout`,
+		"\x1b[1m" + `Feature:` + "\x1b[0m" + ` Checkout`, //nolint:goconst
 		``,
 		`  ` + "\x1b[1m" + `Background:` + "\x1b[0m",
-		`    ` + "\x1b[0;36m" + `Given` + "\x1b[0m" + ` given 0`,
+		`    ` + "\x1b[0;36m" + `Given` + "\x1b[0m" + ` given 0`, //nolint:goconst
 		``,
 		`  ` + "\x1b[1m" + `Scenario:` + "\x1b[0m" + ` scenario 1`,
 		`    ` + "\x1b[0;36m" + `Given` + "\x1b[0m" + ` given 1`,
