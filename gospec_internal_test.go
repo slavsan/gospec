@@ -377,6 +377,53 @@ func TestSingleDescribeWithTwoItBlocks(t *testing.T) {
 	}, "\n"), out.String())
 }
 
+func TestSingleDescribeWithTwoOutputs(t *testing.T) {
+	var (
+		out  bytes.Buffer
+		out2 bytes.Buffer
+		spec *SpecSuite
+		tm   = &mock{t: t}
+	)
+
+	func() {
+		WithSpecSuite(t, func(s *SpecSuite) {
+			spec = s
+			s.t = tm
+			describe, _, it := s.With(Output(&out), Output(&out2)).API()
+
+			describe("describe 1", func() {
+				it("it 1", func(t *T) {})
+				it("it 2", func(t *T) {})
+			})
+		})
+	}()
+
+	assert.Equal(t, [][]any(nil), tm.calls)
+	assert.Equal(t, []string{"describe 1/it 1", "describe 1/it 2"}, tm.testTitles)
+	assert.Equal(t, 0, len(spec.stack))
+	assert.Equal(t, 2, len(spec.suites))
+	assert.Equal(t, 2, len(spec.suites[0]))
+	assert.Equal(t, "describe 1", spec.suites[0][0].title)
+	assert.Equal(t, "it 1", spec.suites[0][1].title)
+	assert.Equal(t, 2, len(spec.suites[1]))
+	assert.Equal(t, "describe 1", spec.suites[1][0].title)
+	assert.Equal(t, "it 2", spec.suites[1][1].title)
+	assert.Equal(t, strings.Join([]string{
+		`describe 1`,
+		`  ✔ it 1`,
+		`  ✔ it 2`,
+		``,
+		``,
+	}, "\n"), out.String())
+	assert.Equal(t, strings.Join([]string{
+		`describe 1`,
+		`  ✔ it 1`,
+		`  ✔ it 2`,
+		``,
+		``,
+	}, "\n"), out2.String())
+}
+
 func TestTwoDescribeBlocksWithTwoItBlocks(t *testing.T) {
 	var (
 		out  bytes.Buffer

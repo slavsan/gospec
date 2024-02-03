@@ -25,6 +25,17 @@ const (
 	isTable
 )
 
+type output2 struct {
+	out            io.Writer
+	colorful       bool
+	durations      bool
+	printFilenames bool
+}
+
+func (o *output2) render(s *FeatureSuite) (int, error) {
+	return o.out.Write([]byte(tree2(s.nodes).String(s, o)))
+}
+
 // Feature is a helper function to define a new feature.
 type Feature func(title string, cb func())
 
@@ -75,7 +86,6 @@ type featureStep struct {
 	t          *testing.T
 	kind       featureStepKind
 	title      string
-	printed    bool
 	file       string
 	lineNo     int
 	failed     bool
@@ -106,9 +116,8 @@ type FeatureSuite struct {
 	inBackground    bool
 	atSuiteIndex    int
 	indentStep      string
-	out             io.Writer
+	outputs         []output2
 	basePath        string
-	printFilenames  bool
 	nodes           []*node2
 	currNode        *node2
 	nodesStack      []*node2
@@ -124,7 +133,6 @@ func newFeatureSuite(t *testing.T) *FeatureSuite {
 	t.Helper()
 	fs := &FeatureSuite{
 		t:          t,
-		out:        os.Stdout,
 		indentStep: TwoSpaces,
 		basePath:   getBasePath(),
 	}
@@ -165,6 +173,11 @@ func (fs *FeatureSuite) API() (
 	Then,
 	Table,
 ) {
+	if len(fs.outputs) == 0 {
+		fs.outputs = append(fs.outputs, output2{
+			out: os.Stdout,
+		})
+	}
 	return fs.feature, fs.background, fs.scenario, fs.given,
 		fs.when, fs.then, fs.table
 }
@@ -183,6 +196,11 @@ func (fs *FeatureSuite) ParallelAPI(done func()) (
 ) {
 	fs.parallel = true
 	fs.done = done
+	if len(fs.outputs) == 0 {
+		fs.outputs = append(fs.outputs, output2{
+			out: os.Stdout,
+		})
+	}
 	return fs.feature, fs.background, fs.scenario, fs.parallelGiven,
 		fs.parallelWhen, fs.parallelThen
 }
@@ -868,14 +886,18 @@ func (fs *FeatureSuite) start() { //nolint:cyclop,gocognit
 	}
 
 	if !fs.parallel {
-		_, _ = fs.out.Write([]byte(tree2(fs.nodes).String(fs)))
+		for _, out := range fs.outputs {
+			_, _ = out.render(fs)
+		}
 		return
 	}
 
 	go func() {
 		fs.wg.Wait()
 
-		_, _ = fs.out.Write([]byte(tree2(fs.nodes).String(fs)))
+		for _, out := range fs.outputs {
+			_, _ = out.render(fs)
+		}
 
 		if fs.done != nil {
 			fs.done()
@@ -883,12 +905,27 @@ func (fs *FeatureSuite) start() { //nolint:cyclop,gocognit
 	}()
 }
 
-func (fs *FeatureSuite) setOutput(w io.Writer) {
-	fs.out = w
-}
+func (fs *FeatureSuite) setOutput(w io.Writer, outputOptions ...OutputOption) {
+	out := output2{
+		out: w,
+	}
 
-func (fs *FeatureSuite) setPrintFilenames() {
-	fs.printFilenames = true
+	for _, o := range outputOptions {
+		if o < Colorful || o > PrintFilenames {
+			fs.t.Fatalf("unexpected option")
+		}
+		if o == Colorful {
+			out.colorful = true
+		}
+		if o == Durations {
+			out.durations = true
+		}
+		if o == PrintFilenames {
+			out.printFilenames = true
+		}
+	}
+
+	fs.outputs = append(fs.outputs, out)
 }
 
 func (fs *FeatureSuite) setIndent(step string) {

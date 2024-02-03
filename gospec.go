@@ -8,6 +8,20 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
+)
+
+const (
+	bold    = "\033[1m"
+	noBold  = "\033[0m"
+	noColor = "\033[0m"
+	gray    = "\033[1;30m"
+	red     = "\033[0;31m"
+	green   = "\033[0;32m"
+	yellow  = "\033[0;33m"
+	blue    = "\033[0;34m"
+	purple  = "\033[0;35m"
+	cyan    = "\033[0;36m"
 )
 
 // Describe is used to define a describe block in a [SpecSuite].
@@ -34,22 +48,21 @@ type ParallelIt func(title string, cb func(t *testing.T, w *World))
 // that can be called on it: [SpecSuite.Describe], [SpecSuite.BeforeEach],
 // and [SpecSuite.It].
 type SpecSuite struct {
-	t              testingInterface
-	parallel       bool
-	done           func()
-	stack          []*step
-	suites         [][]*step
-	indent         int
-	indentStep     string
-	atSuiteIndex   int
-	out            io.Writer
-	basePath       string
-	printFilenames bool
-	nodes          []*node
-	currNode       *node
-	nodesStack     []*node
-	failedCount    int
-	wg             *sync.WaitGroup
+	t            testingInterface
+	parallel     bool
+	done         func()
+	stack        []*step
+	suites       [][]*step
+	indent       int
+	indentStep   string
+	atSuiteIndex int
+	outputs      []output1
+	basePath     string
+	nodes        []*node
+	currNode     *node
+	nodesStack   []*node
+	failedCount  int
+	wg           *sync.WaitGroup
 }
 
 // WithSpecSuite defines a new [SpecSuite] instance, by passing that new instance through the callback.
@@ -62,7 +75,7 @@ type SpecSuite struct {
 func WithSpecSuite(t *testing.T, callback func(s *SpecSuite)) {
 	t.Helper()
 
-	s := newSpectSuite(t)
+	s := newSpecSuite(t)
 
 	defer s.start2()
 
@@ -94,7 +107,6 @@ type step struct {
 	indent     int
 	block      block
 	title      string
-	printed    bool
 	file       string
 	lineNo     int
 	failed     bool
@@ -102,6 +114,7 @@ type step struct {
 	executed   bool
 	cb         func(t *testing.T)
 	parallelCb func(t *testing.T, w *World)
+	timeSpent  time.Duration
 	done       func()
 }
 
@@ -117,12 +130,22 @@ var availableIndents = map[string]struct{}{ //nolint:gochecknoglobals
 	OneTab:     {},
 }
 
+type output1 struct {
+	out            io.Writer
+	colorful       bool
+	durations      bool
+	printFilenames bool
+}
+
+func (o *output1) render(s *SpecSuite) (int, error) {
+	return o.out.Write([]byte(tree(s.nodes).String(s, o)))
+}
+
 // NewTestSuite creates a new instance of SpecSuite.
-func newSpectSuite(t *testing.T) *SpecSuite {
+func newSpecSuite(t *testing.T) *SpecSuite {
 	t.Helper()
 	suite := &SpecSuite{
 		t:          t,
-		out:        os.Stdout,
 		indent:     0,
 		indentStep: TwoSpaces,
 		basePath:   getBasePath(),
@@ -133,7 +156,9 @@ func newSpectSuite(t *testing.T) *SpecSuite {
 func (suite *SpecSuite) start2() {
 	if !suite.parallel {
 		suite.start()
-		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
+		for _, out := range suite.outputs {
+			_, _ = out.render(suite)
+		}
 		return
 	}
 
@@ -145,7 +170,9 @@ func (suite *SpecSuite) start2() {
 	go func() {
 		suite.wg.Wait()
 
-		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
+		for _, out := range suite.outputs {
+			_, _ = out.render(suite)
+		}
 
 		if suite.done != nil {
 			suite.done()
@@ -177,6 +204,13 @@ func (suite *SpecSuite) API() (
 	BeforeEach,
 	It,
 ) {
+	if len(suite.outputs) == 0 {
+		suite.outputs = append(suite.outputs, output1{
+			out:       os.Stdout,
+			colorful:  true,
+			durations: true,
+		})
+	}
 	return suite.describe, suite.beforeEach, suite.it
 }
 
@@ -191,10 +225,15 @@ func (suite *SpecSuite) ParallelAPI(done func()) (
 ) {
 	suite.parallel = true
 	suite.done = done
+	if len(suite.outputs) == 0 {
+		suite.outputs = append(suite.outputs, output1{
+			out: os.Stdout,
+		})
+	}
 	return suite.describe, suite.parallelBeforeEach, suite.parallelIt
 }
 
-func (suite *SpecSuite) start() { //nolint:gocognit
+func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 	suite.t.Helper()
 
 	for i := suite.atSuiteIndex; i < len(suite.suites); i++ {
@@ -203,6 +242,15 @@ func (suite *SpecSuite) start() { //nolint:gocognit
 
 		suite.t.Run(buildSuiteTitle(suite2), func(t *testing.T) {
 			t.Helper()
+			start := time.Now()
+			if !suite.parallel {
+				defer func() {
+					lastStep := suite2[len(suite2)-1]
+					if lastStep.block == isIt {
+						lastStep.timeSpent = time.Since(start)
+					}
+				}()
+			}
 
 			// TODO: check if the last step is an `it` block, and if not, skip this test
 
@@ -606,12 +654,37 @@ func (suite *SpecSuite) copyStack() {
 	suite.suites = append(suite.suites, suiteCopy)
 }
 
-func (suite *SpecSuite) setOutput(w io.Writer) {
-	suite.out = w
-}
+type OutputOption int
 
-func (suite *SpecSuite) setPrintFilenames() {
-	suite.printFilenames = true
+const (
+	Colorful OutputOption = iota + 1
+	Durations
+	PrintFilenames
+)
+
+func (suite *SpecSuite) setOutput(w io.Writer, outputOptions ...OutputOption) {
+	suite.t.Helper()
+
+	out := output1{
+		out: w,
+	}
+
+	for _, o := range outputOptions {
+		if o < Colorful || o > PrintFilenames {
+			suite.t.Fatalf("unexpected option")
+		}
+		if o == Colorful {
+			out.colorful = true
+		}
+		if o == Durations {
+			out.durations = true
+		}
+		if o == PrintFilenames {
+			out.printFilenames = true
+		}
+	}
+
+	suite.outputs = append(suite.outputs, out)
 }
 
 func (suite *SpecSuite) setIndent(step string) {
