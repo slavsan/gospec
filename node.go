@@ -12,20 +12,20 @@ type node struct {
 
 type tree []*node
 
-func (t tree) String(suite *SpecSuite, output *output1) string {
+func (t tree) String(output *output1) string {
 	var sb strings.Builder
 	for _, n := range t {
-		n.write(&sb, 0, output, suite)
+		n.write(&sb, 0, output)
 		sb.WriteString("\n")
 	}
 	return sb.String()
 }
 
-func (n *node) write(sb *strings.Builder, indent int, output *output1, suite *SpecSuite) { //nolint:cyclop
+func (n *node) write(sb *strings.Builder, indent int, output *output1) { //nolint:cyclop
 	var (
 		format = "%s%s%s%s%s%s%s"
 		args   = []any{
-			strings.Repeat(suite.indentStep, indent),
+			strings.Repeat(output.indentStep, indent),
 			"", // green,
 			"", // icon
 			"", // noColor,
@@ -85,6 +85,6 @@ func (n *node) write(sb *strings.Builder, indent int, output *output1, suite *Sp
 	sb.WriteString("\n")
 
 	for _, c := range n.children {
-		c.write(sb, indent+1, output, suite)
+		c.write(sb, indent+1, output)
 	}
 }

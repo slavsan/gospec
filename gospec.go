@@ -54,7 +54,6 @@ type SpecSuite struct {
 	stack        []*step
 	suites       [][]*step
 	indent       int
-	indentStep   string
 	atSuiteIndex int
 	outputs      []output1
 	basePath     string
@@ -118,37 +117,30 @@ type step struct {
 	done       func()
 }
 
-const (
-	TwoSpaces  = "  "
-	FourSpaces = "    "
-	OneTab     = "	"
-)
-
-var availableIndents = map[string]struct{}{ //nolint:gochecknoglobals
-	TwoSpaces:  {},
-	FourSpaces: {},
-	OneTab:     {},
-}
-
 type output1 struct {
 	out            io.Writer
 	colorful       bool
 	durations      bool
 	printFilenames bool
+	indent         OutputOption
+	indentStep     string
 }
 
-func (o *output1) render(s *SpecSuite) (int, error) {
-	return o.out.Write([]byte(tree(s.nodes).String(s, o)))
+func (o *output1) renderSpec(s *SpecSuite) (int, error) {
+	return o.out.Write([]byte(tree(s.nodes).String(o)))
+}
+
+func (o *output1) renderFeature(fs *FeatureSuite) (int, error) {
+	return o.out.Write([]byte(tree2(fs.nodes).String(o)))
 }
 
 // NewTestSuite creates a new instance of SpecSuite.
 func newSpecSuite(t *testing.T) *SpecSuite {
 	t.Helper()
 	suite := &SpecSuite{
-		t:          t,
-		indent:     0,
-		indentStep: TwoSpaces,
-		basePath:   getBasePath(),
+		t:        t,
+		indent:   0,
+		basePath: getBasePath(),
 	}
 	return suite
 }
@@ -157,7 +149,7 @@ func (suite *SpecSuite) start2() {
 	if !suite.parallel {
 		suite.start()
 		for _, out := range suite.outputs {
-			_, _ = out.render(suite)
+			_, _ = out.renderSpec(suite)
 		}
 		return
 	}
@@ -171,7 +163,7 @@ func (suite *SpecSuite) start2() {
 		suite.wg.Wait()
 
 		for _, out := range suite.outputs {
-			_, _ = out.render(suite)
+			_, _ = out.renderSpec(suite)
 		}
 
 		if suite.done != nil {
@@ -654,45 +646,71 @@ func (suite *SpecSuite) copyStack() {
 	suite.suites = append(suite.suites, suiteCopy)
 }
 
+// OutputOption is an option for controlling the formatting of custom outputs.
 type OutputOption int
 
 const (
-	Colorful OutputOption = iota + 1
+	undefinedOption OutputOption = iota
+
+	// Colorful enables colorful output on Unix/Linux terminals. No support for Windows currently.
+	Colorful
+
+	// Durations is an option for displaying the durations for individual test suites.
 	Durations
+
+	// PrintFilenames is an option for showing the filename:line to the specific test suite step, the location of its definition.
 	PrintFilenames
+
+	// IndentTwoSpaces is an option for enabling two spaces as the preferred indentation step.
+	IndentTwoSpaces
+
+	// IndentFourSpaces is an option for enabling four spaces as the preferred indentation step.
+	IndentFourSpaces
+
+	// IndentOneTab is an option for enabling one tab as the preferred indentation step.
+	IndentOneTab
+
+	invalidOption
 )
+
+const (
+	indentTwoSpaces  = "  "
+	indentFourSpaces = "    "
+	indentOneTab     = "	"
+)
+
+func indentStep(o OutputOption) string {
+	switch o { //nolint:exhaustive
+	case IndentTwoSpaces:
+		return indentTwoSpaces
+	case IndentFourSpaces:
+		return indentFourSpaces
+	case IndentOneTab:
+		return indentOneTab
+	}
+	return indentTwoSpaces
+}
+
+func (o OutputOption) string() string {
+	switch o { //nolint:exhaustive
+	case Colorful:
+		return "colors enabled option"
+	case PrintFilenames:
+		return "print filenames option"
+	case IndentTwoSpaces:
+		return "two spaces indentation"
+	case IndentFourSpaces:
+		return "four spaces indentation"
+	case IndentOneTab:
+		return "one tab indentation"
+	default:
+		return "invalid option"
+	}
+}
 
 func (suite *SpecSuite) setOutput(w io.Writer, outputOptions ...OutputOption) {
 	suite.t.Helper()
-
-	out := output1{
-		out: w,
-	}
-
-	for _, o := range outputOptions {
-		if o < Colorful || o > PrintFilenames {
-			suite.t.Fatalf("unexpected option")
-		}
-		if o == Colorful {
-			out.colorful = true
-		}
-		if o == Durations {
-			out.durations = true
-		}
-		if o == PrintFilenames {
-			out.printFilenames = true
-		}
-	}
-
-	suite.outputs = append(suite.outputs, out)
-}
-
-func (suite *SpecSuite) setIndent(step string) {
-	suite.t.Helper()
-	if _, ok := availableIndents[step]; !ok {
-		suite.t.Fatalf("unsupported indentation: '%s'", step)
-	}
-	suite.indentStep = step
+	suite.outputs = append(suite.outputs, setOutput(suite.t, w, outputOptions...))
 }
 
 func getBasePath() string {

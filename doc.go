@@ -9,11 +9,14 @@
 // which carries the test's state with it.
 //
 // Supported options are:
-//   - specifying a custom output writer via the [Output] option.
-//   - print filepath:line in the test output via the [PrintedFilenames] option.
+//   - specifying a custom output writer via the [Output] option. Multiple outputs can be enabled, using several formatting sub-options.
 //
 // Opposite to the Gherkin-first approach, which used in the Cucumber library, gospec follows a
 // code-first approach by providing an API which exposes a "Feature", "Scenario", etc, functions,
 // which assist in structuring tests so that they look as Gherkin, but are actually Go code. Gospec
 // then generates Gherkin (albeit not exactly) as output.
+//
+// Having this code-first approach makes it easier to write test cases without needing to run any other tools to
+// regenerate new test cases or test steps. And with the multiple outputs support, one can still keep definitions/specs
+// in a separate file or set of files, allowing for such files to always be synced, by being re-written on each test run.
 package gospec
