@@ -4,7 +4,7 @@ Gospec is a BDD testing library for the Go programming language.
 
 It's influenced by rspec/mocha and other similar libraries, and also the Cucumber testing library. Gospec provides a similar and familiar developer experience.
 
-The language is a fairly thin layer on top of the standard Go tests. The goal of the project is to use the underlying testing mechanism set by the Go standard library and only provide a means to define tests (specs and features) for a better BDD testing experience.
+The library is a fairly thin layer on top of the standard Go tests. The goal of the project is to use the underlying testing mechanism set by the Go standard library and only provide a means to define tests (specs and features) for a better BDD testing experience.
 
 Gospec has zero dependencies and the intention is for this to not change.
 
