@@ -837,3 +837,78 @@ func TestTableOutput(t *testing.T) {
 		``,
 	}, "\n"), out.String())
 }
+
+func TestColorfulOutput(t *testing.T) {
+	var (
+		out         bytes.Buffer
+		spec        *FeatureSuite
+		testingMock = &mock{t: t}
+	)
+
+	func() {
+		WithFeatureSuite(t, func(s *FeatureSuite) {
+			spec = s
+			s.t = testingMock
+			feature, background, scenario, given, when, then, table := s.With(Output(&out, Colorful)).API()
+
+			feature("Checkout", func() {
+				type Product struct {
+					Name  string
+					Price float64
+					Type  int
+				}
+
+				var items []Product
+
+				background(func() {
+					given("given 0", func(t *T) {})
+				})
+
+				scenario("scenario 1", func() {
+					given("given 1", func(t *T) {})
+					when("when 1", func(t *T) {})
+					then("then 1", func(t *T) {
+						items = []Product{
+							{Name: "Gopher toy", Price: 14.99, Type: 2},
+							{Name: "Crab toy", Price: 17.49, Type: 8},
+						}
+						table(items, "Name", "Price")
+					})
+				})
+			})
+		})
+	}()
+
+	assert.Equal(t, [][]any(nil), testingMock.calls)
+	assert.Equal(t, 0, len(spec.stack))
+	assert.Equal(t, 1, len(spec.suites))
+	assert.Equal(t, 7, len(spec.suites[0]))
+	assert.Equal(t, "Checkout", spec.suites[0][0].title)
+	assert.Equal(t, "", spec.suites[0][1].title)
+	assert.Equal(t, "given 0", spec.suites[0][2].title)
+	assert.Equal(t, "scenario 1", spec.suites[0][3].title)
+	assert.Equal(t, "given 1", spec.suites[0][4].title)
+	assert.Equal(t, "when 1", spec.suites[0][5].title)
+	assert.Equal(t, "then 1", spec.suites[0][6].title)
+
+	assert.Equal(t, []string{
+		"Checkout/scenario 1",
+	}, testingMock.testTitles)
+
+	assert.Equal(t, strings.Join([]string{
+		"\x1b[1m" + `Feature:` + "\x1b[0m" + ` Checkout`, //nolint:goconst
+		``,
+		`  ` + "\x1b[1m" + `Background:` + "\x1b[0m",
+		`    ` + "\x1b[0;36m" + `Given` + "\x1b[0m" + ` given 0`, //nolint:goconst
+		``,
+		`  ` + "\x1b[1m" + `Scenario:` + "\x1b[0m" + ` scenario 1`,
+		`    ` + "\x1b[0;36m" + `Given` + "\x1b[0m" + ` given 1`,
+		`    ` + "\x1b[0;32m" + `When` + "\x1b[0m" + ` when 1`,
+		`    ` + "\x1b[0;33m" + `Then` + "\x1b[0m" + ` then 1`,
+		`      | Name       | Price |`,
+		`      | Gopher toy | 14.99 |`,
+		`      | Crab toy   | 17.49 |`,
+		``,
+		``,
+	}, "\n"), out.String())
+}

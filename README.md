@@ -152,8 +152,7 @@ import (
 
 func TestCartFeature(t *testing.T) {
 	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
-		feature, background, scenario, given, when, then, _ :=
-			s.With(gospec.WithPrintedFilenames()).API()
+		feature, background, scenario, given, when, then, _ := s.API()
 
 		feature("Cart", func() {
 			var cart []string
@@ -253,9 +252,13 @@ func TestCartFeature(t *testing.T) {
 
 When initializing `SpecSuite` or `FeatureSuite` instances, there are several options to enhance the developer experience.
 
-- `Output` for specifying a custom output writer
-- `PrintedFilenames` for printing the `filename:line` on each line where there is a `describe`, `beforeEach`, `it`, `feature`, `scenario` (or any other API method) defined. An editor which supports recognition of paths and allows for jumping to source, could improve the developer experience when dealing with maintenance of existing tests/specs.
-- `Indent` for specifying the single indent step in spec/feature output
+- `Output` for specifying one, or multiple, custom output writers. The `Output` option also supports several useful sub-options:
+    - `Colorful`
+    - `Durations`
+    - `PrintFilenames`
+    - `IndentTwoSpaces`
+    - `IndentFourSpaces`
+    - `IndentOneTab`
 
 ### Parallel execution
 

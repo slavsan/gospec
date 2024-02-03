@@ -8,6 +8,20 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
+)
+
+const (
+	bold    = "\033[1m"
+	noBold  = "\033[0m"
+	noColor = "\033[0m"
+	gray    = "\033[1;30m"
+	red     = "\033[0;31m"
+	green   = "\033[0;32m"
+	yellow  = "\033[0;33m"
+	blue    = "\033[0;34m"
+	purple  = "\033[0;35m"
+	cyan    = "\033[0;36m"
 )
 
 // Describe is used to define a describe block in a [SpecSuite].
@@ -34,22 +48,20 @@ type ParallelIt func(title string, cb func(t *testing.T, w *World))
 // that can be called on it: [SpecSuite.Describe], [SpecSuite.BeforeEach],
 // and [SpecSuite.It].
 type SpecSuite struct {
-	t              testingInterface
-	parallel       bool
-	done           func()
-	stack          []*step
-	suites         [][]*step
-	indent         int
-	indentStep     string
-	atSuiteIndex   int
-	out            io.Writer
-	basePath       string
-	printFilenames bool
-	nodes          []*node
-	currNode       *node
-	nodesStack     []*node
-	failedCount    int
-	wg             *sync.WaitGroup
+	t            testingInterface
+	parallel     bool
+	done         func()
+	stack        []*step
+	suites       [][]*step
+	indent       int
+	atSuiteIndex int
+	outputs      []output1
+	basePath     string
+	nodes        []*node
+	currNode     *node
+	nodesStack   []*node
+	failedCount  int
+	wg           *sync.WaitGroup
 }
 
 // WithSpecSuite defines a new [SpecSuite] instance, by passing that new instance through the callback.
@@ -62,7 +74,7 @@ type SpecSuite struct {
 func WithSpecSuite(t *testing.T, callback func(s *SpecSuite)) {
 	t.Helper()
 
-	s := newSpectSuite(t)
+	s := newSpecSuite(t)
 
 	defer s.start2()
 
@@ -94,7 +106,6 @@ type step struct {
 	indent     int
 	block      block
 	title      string
-	printed    bool
 	file       string
 	lineNo     int
 	failed     bool
@@ -102,30 +113,34 @@ type step struct {
 	executed   bool
 	cb         func(t *testing.T)
 	parallelCb func(t *testing.T, w *World)
+	timeSpent  time.Duration
 	done       func()
 }
 
-const (
-	TwoSpaces  = "  "
-	FourSpaces = "    "
-	OneTab     = "	"
-)
+type output1 struct {
+	out            io.Writer
+	colorful       bool
+	durations      bool
+	printFilenames bool
+	indent         OutputOption
+	indentStep     string
+}
 
-var availableIndents = map[string]struct{}{ //nolint:gochecknoglobals
-	TwoSpaces:  {},
-	FourSpaces: {},
-	OneTab:     {},
+func (o *output1) renderSpec(s *SpecSuite) (int, error) {
+	return o.out.Write([]byte(tree(s.nodes).String(o)))
+}
+
+func (o *output1) renderFeature(fs *FeatureSuite) (int, error) {
+	return o.out.Write([]byte(tree2(fs.nodes).String(o)))
 }
 
 // NewTestSuite creates a new instance of SpecSuite.
-func newSpectSuite(t *testing.T) *SpecSuite {
+func newSpecSuite(t *testing.T) *SpecSuite {
 	t.Helper()
 	suite := &SpecSuite{
-		t:          t,
-		out:        os.Stdout,
-		indent:     0,
-		indentStep: TwoSpaces,
-		basePath:   getBasePath(),
+		t:        t,
+		indent:   0,
+		basePath: getBasePath(),
 	}
 	return suite
 }
@@ -133,7 +148,9 @@ func newSpectSuite(t *testing.T) *SpecSuite {
 func (suite *SpecSuite) start2() {
 	if !suite.parallel {
 		suite.start()
-		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
+		for _, out := range suite.outputs {
+			_, _ = out.renderSpec(suite)
+		}
 		return
 	}
 
@@ -145,7 +162,9 @@ func (suite *SpecSuite) start2() {
 	go func() {
 		suite.wg.Wait()
 
-		_, _ = suite.out.Write([]byte(tree(suite.nodes).String(suite)))
+		for _, out := range suite.outputs {
+			_, _ = out.renderSpec(suite)
+		}
 
 		if suite.done != nil {
 			suite.done()
@@ -177,6 +196,13 @@ func (suite *SpecSuite) API() (
 	BeforeEach,
 	It,
 ) {
+	if len(suite.outputs) == 0 {
+		suite.outputs = append(suite.outputs, output1{
+			out:       os.Stdout,
+			colorful:  true,
+			durations: true,
+		})
+	}
 	return suite.describe, suite.beforeEach, suite.it
 }
 
@@ -191,10 +217,15 @@ func (suite *SpecSuite) ParallelAPI(done func()) (
 ) {
 	suite.parallel = true
 	suite.done = done
+	if len(suite.outputs) == 0 {
+		suite.outputs = append(suite.outputs, output1{
+			out: os.Stdout,
+		})
+	}
 	return suite.describe, suite.parallelBeforeEach, suite.parallelIt
 }
 
-func (suite *SpecSuite) start() { //nolint:gocognit
+func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 	suite.t.Helper()
 
 	for i := suite.atSuiteIndex; i < len(suite.suites); i++ {
@@ -203,6 +234,15 @@ func (suite *SpecSuite) start() { //nolint:gocognit
 
 		suite.t.Run(buildSuiteTitle(suite2), func(t *testing.T) {
 			t.Helper()
+			start := time.Now()
+			if !suite.parallel {
+				defer func() {
+					lastStep := suite2[len(suite2)-1]
+					if lastStep.block == isIt {
+						lastStep.timeSpent = time.Since(start)
+					}
+				}()
+			}
 
 			// TODO: check if the last step is an `it` block, and if not, skip this test
 
@@ -606,20 +646,71 @@ func (suite *SpecSuite) copyStack() {
 	suite.suites = append(suite.suites, suiteCopy)
 }
 
-func (suite *SpecSuite) setOutput(w io.Writer) {
-	suite.out = w
-}
+// OutputOption is an option for controlling the formatting of custom outputs.
+type OutputOption int
 
-func (suite *SpecSuite) setPrintFilenames() {
-	suite.printFilenames = true
-}
+const (
+	undefinedOption OutputOption = iota
 
-func (suite *SpecSuite) setIndent(step string) {
-	suite.t.Helper()
-	if _, ok := availableIndents[step]; !ok {
-		suite.t.Fatalf("unsupported indentation: '%s'", step)
+	// Colorful enables colorful output on Unix/Linux terminals. No support for Windows currently.
+	Colorful
+
+	// Durations is an option for displaying the durations for individual test suites.
+	Durations
+
+	// PrintFilenames is an option for showing the filename:line to the specific test suite step, the location of its definition.
+	PrintFilenames
+
+	// IndentTwoSpaces is an option for enabling two spaces as the preferred indentation step.
+	IndentTwoSpaces
+
+	// IndentFourSpaces is an option for enabling four spaces as the preferred indentation step.
+	IndentFourSpaces
+
+	// IndentOneTab is an option for enabling one tab as the preferred indentation step.
+	IndentOneTab
+
+	invalidOption
+)
+
+const (
+	indentTwoSpaces  = "  "
+	indentFourSpaces = "    "
+	indentOneTab     = "	"
+)
+
+func indentStep(o OutputOption) string {
+	switch o { //nolint:exhaustive
+	case IndentTwoSpaces:
+		return indentTwoSpaces
+	case IndentFourSpaces:
+		return indentFourSpaces
+	case IndentOneTab:
+		return indentOneTab
 	}
-	suite.indentStep = step
+	return indentTwoSpaces
+}
+
+func (o OutputOption) string() string {
+	switch o { //nolint:exhaustive
+	case Colorful:
+		return "colors enabled option"
+	case PrintFilenames:
+		return "print filenames option"
+	case IndentTwoSpaces:
+		return "two spaces indentation"
+	case IndentFourSpaces:
+		return "four spaces indentation"
+	case IndentOneTab:
+		return "one tab indentation"
+	default:
+		return "invalid option"
+	}
+}
+
+func (suite *SpecSuite) setOutput(w io.Writer, outputOptions ...OutputOption) {
+	suite.t.Helper()
+	suite.outputs = append(suite.outputs, setOutput(suite.t, w, outputOptions...))
 }
 
 func getBasePath() string {

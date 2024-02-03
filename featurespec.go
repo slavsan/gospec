@@ -75,7 +75,6 @@ type featureStep struct {
 	t          *testing.T
 	kind       featureStepKind
 	title      string
-	printed    bool
 	file       string
 	lineNo     int
 	failed     bool
@@ -106,9 +105,8 @@ type FeatureSuite struct {
 	inBackground    bool
 	atSuiteIndex    int
 	indentStep      string
-	out             io.Writer
+	outputs         []output1
 	basePath        string
-	printFilenames  bool
 	nodes           []*node2
 	currNode        *node2
 	nodesStack      []*node2
@@ -123,10 +121,8 @@ type FeatureSuite struct {
 func newFeatureSuite(t *testing.T) *FeatureSuite {
 	t.Helper()
 	fs := &FeatureSuite{
-		t:          t,
-		out:        os.Stdout,
-		indentStep: TwoSpaces,
-		basePath:   getBasePath(),
+		t:        t,
+		basePath: getBasePath(),
 	}
 	return fs
 }
@@ -165,6 +161,11 @@ func (fs *FeatureSuite) API() (
 	Then,
 	Table,
 ) {
+	if len(fs.outputs) == 0 {
+		fs.outputs = append(fs.outputs, output1{
+			out: os.Stdout,
+		})
+	}
 	return fs.feature, fs.background, fs.scenario, fs.given,
 		fs.when, fs.then, fs.table
 }
@@ -183,6 +184,11 @@ func (fs *FeatureSuite) ParallelAPI(done func()) (
 ) {
 	fs.parallel = true
 	fs.done = done
+	if len(fs.outputs) == 0 {
+		fs.outputs = append(fs.outputs, output1{
+			out: os.Stdout,
+		})
+	}
 	return fs.feature, fs.background, fs.scenario, fs.parallelGiven,
 		fs.parallelWhen, fs.parallelThen
 }
@@ -868,14 +874,18 @@ func (fs *FeatureSuite) start() { //nolint:cyclop,gocognit
 	}
 
 	if !fs.parallel {
-		_, _ = fs.out.Write([]byte(tree2(fs.nodes).String(fs)))
+		for _, out := range fs.outputs {
+			_, _ = out.renderFeature(fs)
+		}
 		return
 	}
 
 	go func() {
 		fs.wg.Wait()
 
-		_, _ = fs.out.Write([]byte(tree2(fs.nodes).String(fs)))
+		for _, out := range fs.outputs {
+			_, _ = out.renderFeature(fs)
+		}
 
 		if fs.done != nil {
 			fs.done()
@@ -883,18 +893,44 @@ func (fs *FeatureSuite) start() { //nolint:cyclop,gocognit
 	}()
 }
 
-func (fs *FeatureSuite) setOutput(w io.Writer) {
-	fs.out = w
-}
+func setOutput(t testingInterface, w io.Writer, outputOptions ...OutputOption) output1 {
+	t.Helper()
 
-func (fs *FeatureSuite) setPrintFilenames() {
-	fs.printFilenames = true
-}
-
-func (fs *FeatureSuite) setIndent(step string) {
-	fs.t.Helper()
-	if _, ok := availableIndents[step]; !ok {
-		fs.t.Fatalf("unsupported indentation: '%s'", step)
+	out := output1{
+		out: w,
 	}
-	fs.indentStep = step
+
+	for _, o := range outputOptions {
+		if o <= undefinedOption || o >= invalidOption {
+			t.Fatalf("unexpected option")
+		}
+		if o == Colorful {
+			out.colorful = true
+		}
+		if o == Durations {
+			out.durations = true
+		}
+		if o == PrintFilenames {
+			out.printFilenames = true
+		}
+		if o >= IndentTwoSpaces && o <= IndentOneTab {
+			if out.indent != undefinedOption {
+				t.Fatalf("indent already set to: %s", out.indent.string())
+			}
+			out.indent = o
+		}
+	}
+
+	if out.indent == undefinedOption {
+		out.indent = IndentTwoSpaces
+	}
+
+	out.indentStep = indentStep(out.indent)
+
+	return out
+}
+
+func (fs *FeatureSuite) setOutput(w io.Writer, outputOptions ...OutputOption) {
+	fs.t.Helper()
+	fs.outputs = append(fs.outputs, setOutput(fs.t, w, outputOptions...))
 }

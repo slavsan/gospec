@@ -1,6 +1,7 @@
 package examples_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/slavsan/gospec"
@@ -10,7 +11,7 @@ import (
 func TestSimpleFeatureExample(t *testing.T) {
 	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
 		feature, background, scenario, given, when, then, _ :=
-			s.With(gospec.PrintedFilenames()).API()
+			s.With(gospec.Output(os.Stdout, gospec.PrintFilenames)).API()
 
 		feature("Cart", func() {
 			var cart []string

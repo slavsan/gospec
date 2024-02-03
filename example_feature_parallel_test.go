@@ -1,6 +1,7 @@
 package gospec_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/slavsan/gospec"
@@ -13,7 +14,7 @@ import (
 // ExampleParallelFeatureSuite shows an example gospec.FeatureSuite which runs tests in parallel.
 func Example_parallelFeatureSuite() {
 	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
-		feature, background, scenario, given, when, then := s.With(gospec.PrintedFilenames()).ParallelAPI(func() {
+		feature, background, scenario, given, when, then := s.With(gospec.Output(os.Stdout, gospec.PrintFilenames)).ParallelAPI(func() {
 			/* optionally, execute this once all parallel tests have finished */
 		})
 
