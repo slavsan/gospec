@@ -228,8 +228,8 @@ func (suite *SpecSuite) ParallelAPI(done func()) (
 func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 	suite.t.Helper()
 
-	for i := 0; i < len(suite.suites); i++ {
-		suite2 := suite.suites[i]
+	for _, suite2 := range suite.suites {
+		suite2 := suite2
 
 		suite.t.Run(buildSuiteTitle(suite2), func(t *testing.T) {
 			t.Helper()
@@ -249,10 +249,10 @@ func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 			if suite.parallel {
 				t.Parallel()
 				for _, s := range suite2 {
+					if s.block == isIt {
+						s.t = t
+					}
 					if s.block == isIt || s.block == isBeforeEach {
-						if s.block == isIt {
-							s.t = t
-						}
 						if s.block == isIt {
 							s.done = func() {
 								suite.wg.Done()
