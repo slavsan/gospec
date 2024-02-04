@@ -935,7 +935,7 @@ func TestFailedTestSuitesWithFirstSuiteFailing(t *testing.T) {
 	assert.Equal(t, "it 4", spec.suites[3][1].title)
 	assert.Equal(t, strings.Join([]string{
 		`describe 1`,
-		`  s it 1`,
+		`  [skip] it 1`,
 		`  ✔ it 2`,
 		``,
 		`describe 2`,
@@ -1001,7 +1001,7 @@ func TestFailedTestSuitesWithLastSuiteFailing(t *testing.T) {
 		``,
 		`describe 2`,
 		`  ✔ it 3`,
-		`  s it 4`,
+		`  [skip] it 4`,
 		``,
 		``,
 	}, "\n"), out.String())

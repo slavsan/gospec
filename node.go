@@ -56,24 +56,22 @@ func (n *node) write(sb *strings.Builder, indent int, output *output1) { //nolin
 
 	if n.step.block == isIt {
 		args[2] = "✔ "
-
-		if !n.step.executed && n.step.failedAt == 0 {
-			if output.colorful {
-				args[1] = yellow
-			}
-			args[2] = "s "
-		}
 	}
 
-	if n.step.block == isIt && n.step.failed {
-		if n.step.failedAt == 1 {
-			if output.colorful {
-				args[1] = red
-			}
-			args[2] = "⨯ "
-		} else {
-			args[2] = "s "
+	if n.step.block == isIt && (n.step.t == nil || n.step.t.Skipped()) {
+		if output.colorful {
+			args[1] = cyan
+			args[4] = cyan
 		}
+		args[2] = "[skip] "
+	}
+
+	if n.step.block == isIt && n.step.t != nil && n.step.t.Failed() {
+		if output.colorful {
+			args[1] = red
+			args[4] = red
+		}
+		args[2] = "⨯ "
 	}
 
 	if output.printFilenames {

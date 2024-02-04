@@ -48,20 +48,19 @@ type ParallelIt func(title string, cb func(t *testing.T, w *World))
 // that can be called on it: [SpecSuite.Describe], [SpecSuite.BeforeEach],
 // and [SpecSuite.It].
 type SpecSuite struct {
-	t            testingInterface
-	parallel     bool
-	done         func()
-	stack        []*step
-	suites       [][]*step
-	indent       int
-	atSuiteIndex int
-	outputs      []output1
-	basePath     string
-	nodes        []*node
-	currNode     *node
-	nodesStack   []*node
-	failedCount  int
-	wg           *sync.WaitGroup
+	t           testingInterface
+	parallel    bool
+	done        func()
+	stack       []*step
+	suites      [][]*step
+	indent      int
+	outputs     []output1
+	basePath    string
+	nodes       []*node
+	currNode    *node
+	nodesStack  []*node
+	failedCount int
+	wg          *sync.WaitGroup
 }
 
 // WithSpecSuite defines a new [SpecSuite] instance, by passing that new instance through the callback.
@@ -103,6 +102,7 @@ var (
 )
 
 type step struct {
+	t          testingInterface
 	indent     int
 	block      block
 	title      string
@@ -155,7 +155,7 @@ func (suite *SpecSuite) start2() {
 	}
 
 	suite.wg = &sync.WaitGroup{}
-	suite.wg.Add(len(suite.suites[suite.atSuiteIndex:]))
+	suite.wg.Add(len(suite.suites))
 
 	suite.start()
 
@@ -228,9 +228,8 @@ func (suite *SpecSuite) ParallelAPI(done func()) (
 func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 	suite.t.Helper()
 
-	for i := suite.atSuiteIndex; i < len(suite.suites); i++ {
+	for i := 0; i < len(suite.suites); i++ {
 		suite2 := suite.suites[i]
-		suite.atSuiteIndex++
 
 		suite.t.Run(buildSuiteTitle(suite2), func(t *testing.T) {
 			t.Helper()
@@ -244,15 +243,6 @@ func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 				}()
 			}
 
-			// TODO: check if the last step is an `it` block, and if not, skip this test
-
-			if suite.t.Failed() {
-				if suite.parallel {
-					suite.wg.Done()
-					t.Skip()
-				}
-			}
-
 			world := newWorld()
 			world.t = t
 
@@ -260,6 +250,9 @@ func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 				t.Parallel()
 				for _, s := range suite2 {
 					if s.block == isIt || s.block == isBeforeEach {
+						if s.block == isIt {
+							s.t = t
+						}
 						if s.block == isIt {
 							s.done = func() {
 								suite.wg.Done()
@@ -276,6 +269,9 @@ func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 			for _, s := range suite2 {
 				if s.cb != nil {
 					if s.block == isIt || s.block == isBeforeEach {
+						if s.block == isIt {
+							s.t = t
+						}
 						s.cb(t)
 						continue
 					}
