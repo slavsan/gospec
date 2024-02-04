@@ -1,6 +1,9 @@
 package gospec
 
-import "io"
+import (
+	"io"
+	"os"
+)
 
 // SuiteOption is a type defining an option for controlling the behaviour of [SpecSuite] or [FeatureSuite] instances.
 // The available option is: [Output].
@@ -49,5 +52,14 @@ func Output(w io.Writer, outputOptions ...OutputOption) SuiteOption {
 			s.t.Helper()
 		}
 		suite.setOutput(w, outputOptions...)
+	}
+}
+
+func defaultOutput() output1 {
+	return output1{
+		out:        os.Stdout,
+		colorful:   true,
+		indent:     IndentTwoSpaces,
+		indentStep: indentTwoSpaces,
 	}
 }

@@ -18,6 +18,9 @@ func (m *mock) Helper() {
 func (m *mock) Parallel() {
 }
 
+func (m *mock) Skip(args ...any) {
+}
+
 func (m *mock) Failed() bool {
 	return len(m.calls) > 0
 }

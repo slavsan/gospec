@@ -3,7 +3,6 @@ package gospec
 import (
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -162,9 +161,7 @@ func (fs *FeatureSuite) API() (
 	Table,
 ) {
 	if len(fs.outputs) == 0 {
-		fs.outputs = append(fs.outputs, output1{
-			out: os.Stdout,
-		})
+		fs.outputs = append(fs.outputs, defaultOutput())
 	}
 	return fs.feature, fs.background, fs.scenario, fs.given,
 		fs.when, fs.then, fs.table
@@ -185,9 +182,7 @@ func (fs *FeatureSuite) ParallelAPI(done func()) (
 	fs.parallel = true
 	fs.done = done
 	if len(fs.outputs) == 0 {
-		fs.outputs = append(fs.outputs, output1{
-			out: os.Stdout,
-		})
+		fs.outputs = append(fs.outputs, defaultOutput())
 	}
 	return fs.feature, fs.background, fs.scenario, fs.parallelGiven,
 		fs.parallelWhen, fs.parallelThen

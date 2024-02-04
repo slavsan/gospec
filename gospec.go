@@ -24,6 +24,20 @@ const (
 	cyan    = "\033[0;36m"
 )
 
+// SpecOption is used for changing the behaviour of [SpecSuite] tests.
+// The available options are: [Only].
+type SpecOption int
+
+const (
+	undefinedSpecOption SpecOption = iota
+
+	// Only allows for specifying which suites to run. Once there is at least
+	// one `It` block with this option passed, all other ones will be skipped.
+	Only
+
+	invalidSpecOption
+)
+
 // Describe is used to define a describe block in a [SpecSuite].
 type Describe func(title string, cb func())
 
@@ -31,7 +45,7 @@ type Describe func(title string, cb func())
 type BeforeEach func(cb func(t *testing.T))
 
 // It defines a block which gets executed.
-type It func(title string, cb func(t *testing.T))
+type It func(title string, cb func(t *testing.T), options ...SpecOption)
 
 // ParallelBeforeEach is the same as [BeforeEach] but is used for parallel tests. It accepts
 // additionally a *[World] instance which is used for passing state between the different steps
@@ -60,6 +74,7 @@ type SpecSuite struct {
 	currNode    *node
 	nodesStack  []*node
 	failedCount int
+	only        bool
 	wg          *sync.WaitGroup
 }
 
@@ -111,6 +126,7 @@ type step struct {
 	failed     bool
 	failedAt   int
 	executed   bool
+	only       bool
 	cb         func(t *testing.T)
 	parallelCb func(t *testing.T, w *World)
 	timeSpent  time.Duration
@@ -197,11 +213,9 @@ func (suite *SpecSuite) API() (
 	It,
 ) {
 	if len(suite.outputs) == 0 {
-		suite.outputs = append(suite.outputs, output1{
-			out:       os.Stdout,
-			colorful:  true,
-			durations: true,
-		})
+		o := defaultOutput()
+		o.durations = true
+		suite.outputs = append(suite.outputs, o)
 	}
 	return suite.describe, suite.beforeEach, suite.it
 }
@@ -218,9 +232,9 @@ func (suite *SpecSuite) ParallelAPI(done func()) (
 	suite.parallel = true
 	suite.done = done
 	if len(suite.outputs) == 0 {
-		suite.outputs = append(suite.outputs, output1{
-			out: os.Stdout,
-		})
+		do := defaultOutput()
+		do.durations = true
+		suite.outputs = append(suite.outputs, do)
 	}
 	return suite.describe, suite.parallelBeforeEach, suite.parallelIt
 }
@@ -271,6 +285,9 @@ func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 					if s.block == isIt || s.block == isBeforeEach {
 						if s.block == isIt {
 							s.t = t
+						}
+						if s.block == isIt && suite.only && !s.only && s.t != nil {
+							s.t.Skip()
 						}
 						s.cb(t)
 						continue
@@ -580,7 +597,7 @@ func (suite *SpecSuite) parallelIt(title string, cb func(t *testing.T, w *World)
 	suite.popStack(s)
 }
 
-func (suite *SpecSuite) it(title string, cb func(t *testing.T)) {
+func (suite *SpecSuite) it(title string, cb func(t *testing.T), options ...SpecOption) {
 	suite.t.Helper()
 
 	_, file, lineNo, _ := runtime.Caller(1)
@@ -598,6 +615,16 @@ func (suite *SpecSuite) it(title string, cb func(t *testing.T)) {
 		file:   file,
 		lineNo: lineNo,
 		cb:     nil,
+	}
+
+	for _, o := range options {
+		if o <= undefinedSpecOption || o >= invalidSpecOption {
+			suite.t.Errorf("invalid spec option passed")
+		}
+		if o == Only {
+			s.only = true
+			suite.only = true
+		}
 	}
 
 	n.step = s
