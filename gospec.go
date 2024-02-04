@@ -73,9 +73,9 @@ type SpecSuite struct {
 	nodes       []*node
 	currNode    *node
 	nodesStack  []*node
-	failedCount int
 	only        bool
 	wg          *sync.WaitGroup
+	testObjects []*testing.T
 }
 
 // WithSpecSuite defines a new [SpecSuite] instance, by passing that new instance through the callback.
@@ -119,13 +119,11 @@ var (
 type step struct {
 	t          testingInterface
 	indent     int
+	index      int
 	block      block
 	title      string
 	file       string
 	lineNo     int
-	failed     bool
-	failedAt   int
-	executed   bool
 	only       bool
 	cb         func(t *testing.T)
 	parallelCb func(t *testing.T, w *World)
@@ -142,8 +140,18 @@ type output1 struct {
 	indentStep     string
 }
 
+func (suite *SpecSuite) failed(index int) bool {
+	t := suite.testObjects[index]
+	return t.Failed()
+}
+
+func (suite *SpecSuite) skipped(index int) bool {
+	t := suite.testObjects[index]
+	return t.Skipped()
+}
+
 func (o *output1) renderSpec(s *SpecSuite) (int, error) {
-	return o.out.Write([]byte(tree(s.nodes).String(o)))
+	return o.out.Write([]byte(tree(s.nodes).String(o, s)))
 }
 
 func (o *output1) renderFeature(fs *FeatureSuite) (int, error) {
@@ -242,8 +250,18 @@ func (suite *SpecSuite) ParallelAPI(done func()) (
 func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 	suite.t.Helper()
 
-	for _, suite2 := range suite.suites {
+	suite.testObjects = make([]*testing.T, len(suite.suites))
+
+	for i, suite2 := range suite.suites {
 		suite2 := suite2
+		i := i
+
+		if len(suite2) > 0 {
+			lastStep := suite2[len(suite2)-1]
+			if lastStep.block == isIt {
+				lastStep.index = i
+			}
+		}
 
 		suite.t.Run(buildSuiteTitle(suite2), func(t *testing.T) {
 			t.Helper()
@@ -260,23 +278,20 @@ func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 			world := newWorld()
 			world.t = t
 
+			suite.testObjects[i] = t
+
 			if suite.parallel {
 				t.Parallel()
+				defer suite.wg.Done()
 				for _, s := range suite2 {
 					if s.block == isIt {
 						s.t = t
 					}
 					if s.block == isIt || s.block == isBeforeEach {
-						if s.block == isIt {
-							s.done = func() {
-								suite.wg.Done()
-							}
-						}
 						s.parallelCb(t, world)
 						continue
 					}
 				}
-				// suite.wg.Done() // TODO: perhaps just call this here ??
 				return
 			}
 
@@ -573,19 +588,7 @@ func (suite *SpecSuite) parallelIt(title string, cb func(t *testing.T, w *World)
 	s.parallelCb = func(t *testing.T, w *World) {
 		w.t.Helper()
 
-		if suite.parallel {
-			defer s.done()
-		}
-
 		cb(t, w)
-
-		s.executed = true
-
-		if w.t.Failed() {
-			s.failed = true
-			suite.failedCount++
-			s.failedAt = suite.failedCount
-		}
 	}
 
 	suite.pushStack(s)
@@ -619,7 +622,7 @@ func (suite *SpecSuite) it(title string, cb func(t *testing.T), options ...SpecO
 
 	for _, o := range options {
 		if o <= undefinedSpecOption || o >= invalidSpecOption {
-			suite.t.Errorf("invalid spec option passed")
+			suite.t.Fatalf("invalid spec option passed")
 		}
 		if o == Only {
 			s.only = true
@@ -639,14 +642,6 @@ func (suite *SpecSuite) it(title string, cb func(t *testing.T), options ...SpecO
 		}
 
 		cb(t)
-
-		s.executed = true
-
-		if t.Failed() {
-			s.failed = true
-			suite.failedCount++
-			s.failedAt = suite.failedCount
-		}
 	}
 
 	suite.pushStack(s)

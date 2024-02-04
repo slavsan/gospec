@@ -12,16 +12,16 @@ type node struct {
 
 type tree []*node
 
-func (t tree) String(output *output1) string {
+func (t tree) String(output *output1, suite *SpecSuite) string {
 	var sb strings.Builder
 	for _, n := range t {
-		n.write(&sb, 0, output)
+		n.write(&sb, 0, output, suite)
 		sb.WriteString("\n")
 	}
 	return sb.String()
 }
 
-func (n *node) write(sb *strings.Builder, indent int, output *output1) { //nolint:cyclop
+func (n *node) write(sb *strings.Builder, indent int, output *output1, suite *SpecSuite) { //nolint:cyclop
 	var (
 		format = "%s%s%s%s%s%s%s%s"
 		args   = []any{
@@ -59,7 +59,7 @@ func (n *node) write(sb *strings.Builder, indent int, output *output1) { //nolin
 		args[3] = "✔ "
 	}
 
-	if n.step.block == isIt && (n.step.t == nil || n.step.t.Skipped()) {
+	if n.step.block == isIt && ((n.step.t != nil && n.step.t.Skipped()) || suite.skipped(n.step.index)) {
 		if output.colorful {
 			args[2] = cyan
 			args[5] = cyan
@@ -67,7 +67,7 @@ func (n *node) write(sb *strings.Builder, indent int, output *output1) { //nolin
 		args[3] = "[skip] "
 	}
 
-	if n.step.block == isIt && n.step.t != nil && n.step.t.Failed() {
+	if n.step.block == isIt && ((n.step.t != nil && n.step.t.Failed()) || suite.failed(n.step.index)) {
 		if output.colorful {
 			args[2] = red
 			args[5] = red
@@ -92,6 +92,6 @@ func (n *node) write(sb *strings.Builder, indent int, output *output1) { //nolin
 	sb.WriteString("\n")
 
 	for _, c := range n.children {
-		c.write(sb, indent+1, output)
+		c.write(sb, indent+1, output, suite)
 	}
 }
