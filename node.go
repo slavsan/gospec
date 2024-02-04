@@ -23,9 +23,10 @@ func (t tree) String(output *output1) string {
 
 func (n *node) write(sb *strings.Builder, indent int, output *output1) { //nolint:cyclop
 	var (
-		format = "%s%s%s%s%s%s%s"
+		format = "%s%s%s%s%s%s%s%s"
 		args   = []any{
 			strings.Repeat(output.indentStep, indent),
+			"", // only
 			"", // green,
 			"", // icon
 			"", // noColor,
@@ -37,15 +38,15 @@ func (n *node) write(sb *strings.Builder, indent int, output *output1) { //nolin
 
 	if output.colorful {
 		if n.step.block == isDescribe {
-			args[4] = bold
-			args[6] = noColor
+			args[5] = bold
+			args[7] = noColor
 		}
 		if n.step.block == isIt {
-			args[1] = green
-			args[3] = noColor
+			args[2] = green
+			args[4] = noColor
 
-			args[4] = gray
-			args[6] = noColor
+			args[5] = gray
+			args[7] = noColor
 		}
 	}
 
@@ -55,23 +56,31 @@ func (n *node) write(sb *strings.Builder, indent int, output *output1) { //nolin
 	}
 
 	if n.step.block == isIt {
-		args[2] = "✔ "
+		args[3] = "✔ "
 	}
 
 	if n.step.block == isIt && (n.step.t == nil || n.step.t.Skipped()) {
 		if output.colorful {
-			args[1] = cyan
-			args[4] = cyan
+			args[2] = cyan
+			args[5] = cyan
 		}
-		args[2] = "[skip] "
+		args[3] = "[skip] "
 	}
 
 	if n.step.block == isIt && n.step.t != nil && n.step.t.Failed() {
 		if output.colorful {
-			args[1] = red
-			args[4] = red
+			args[2] = red
+			args[5] = red
 		}
-		args[2] = "⨯ "
+		args[3] = "⨯ "
+	}
+
+	if n.step.block == isIt && n.step.only {
+		if output.colorful {
+			args[1] = fmt.Sprintf("%s[only]%s ", yellow, noColor)
+		} else {
+			args[1] = "[only] "
+		}
 	}
 
 	if output.printFilenames {

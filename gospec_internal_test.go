@@ -1061,7 +1061,7 @@ func TestUsingOnlyOption(t *testing.T) {
 		`  [skip] it 2`,
 		``,
 		`describe 2`,
-		`  ✔ it 3`,
+		`  [only] ✔ it 3`,
 		`  [skip] it 4`,
 		``,
 		``,
