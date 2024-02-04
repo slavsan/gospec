@@ -19,6 +19,7 @@ func (m *mock) Parallel() {
 }
 
 func (m *mock) Skip(args ...any) {
+	_ = args
 }
 
 func (m *mock) Failed() bool {

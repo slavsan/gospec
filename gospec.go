@@ -281,17 +281,17 @@ func (suite *SpecSuite) start() { //nolint:gocognit,cyclop
 			}
 
 			for _, s := range suite2 {
-				if s.cb != nil {
-					if s.block == isIt || s.block == isBeforeEach {
-						if s.block == isIt {
-							s.t = t
-						}
-						if s.block == isIt && suite.only && !s.only && s.t != nil {
-							s.t.Skip()
-						}
-						s.cb(t)
-						continue
+				if s.cb == nil {
+					continue
+				}
+				if s.block == isIt || s.block == isBeforeEach {
+					if s.block == isIt {
+						s.t = t
 					}
+					if s.block == isIt && suite.only && !s.only && s.t != nil {
+						s.t.Skip()
+					}
+					s.cb(t)
 				}
 			}
 		})
