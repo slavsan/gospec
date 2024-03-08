@@ -9,5 +9,7 @@ import (
 // will get reused between the other Example tests which are only
 // meant to be used for documentation purposes
 
-var t *testing.T //nolint:gochecknoglobals
-var parallelTestsWg sync.WaitGroup
+var (
+	t               *testing.T     //nolint:gochecknoglobals
+	parallelTestsWg sync.WaitGroup //nolint:gochecknoglobals
+)
