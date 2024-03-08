@@ -1,18 +1,21 @@
 package examples_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/slavsan/gospec"
 	"github.com/slavsan/gospec/internal/testing/helpers/assert"
 )
 
-type W = gospec.W
 type T = testing.T
 
 func TestSimpleSpec(t *testing.T) {
+	t.Parallel()
+
 	gospec.WithSpecSuite(t, func(s *gospec.SpecSuite) {
-		describe, beforeEach, it := s.API()
+		output := gospec.Output(os.Stdout, gospec.Colorful, gospec.Durations, gospec.PrintFilenames)
+		describe, beforeEach, it := s.With(output).API()
 
 		describe("Cart", func() {
 			var cart []string

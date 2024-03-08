@@ -127,6 +127,7 @@ func (w *World) Table(fs *FeatureSuite, items any, columns ...string) { //nolint
 	defer fs.mu.Unlock()
 
 	if len(w.currentFeatureStep.n.children) > 0 {
+
 		return
 	}
 

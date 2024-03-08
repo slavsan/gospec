@@ -9,6 +9,8 @@ import (
 )
 
 func TestSimpleFeatureExample(t *testing.T) {
+	t.Parallel()
+
 	gospec.WithFeatureSuite(t, func(s *gospec.FeatureSuite) {
 		feature, background, scenario, given, when, then, _ :=
 			s.With(gospec.Output(os.Stdout, gospec.PrintFilenames)).API()
